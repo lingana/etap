@@ -1,0 +1,103 @@
+<div class="review-container">
+  <div *ngIf="isLoading" class="loading">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
+  <div *ngIf="reviewStats" class="review-content">
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-raised-button (click)="approveAllPending()">
+        <mat-icon>done_all</mat-icon>
+        Approve All Pending
+      </button>
+      <button mat-raised-button (click)="exportReport()">
+        <mat-icon>download</mat-icon>
+        Export Report
+      </button>
+    </div>
+
+    <!-- Review Statistics -->
+    <div class="stats-grid">
+      <section class="stat-card" aria-label="Total reviewed">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">assignment_turned_in</mat-icon>
+          <div class="stat-value">{{ reviewStats.totalReviewed | number }}</div>
+          <div class="stat-label">Total Reviewed</div>
+        </div>
+      </section>
+
+      <section class="stat-card pending" aria-label="Pending review">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">schedule</mat-icon>
+          <div class="stat-value">{{ reviewStats.totalPending | number }}</div>
+          <div class="stat-label">Pending Review</div>
+        </div>
+      </section>
+
+      <section class="stat-card progress" aria-label="Completion rate">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">trending_up</mat-icon>
+          <div class="stat-value">{{ reviewStats.completionRate | number: '1.1-1' }}%</div>
+          <div class="stat-label">Completion Rate</div>
+        </div>
+      </section>
+
+      <section class="stat-card approved" aria-label="Claims approved">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">check_circle</mat-icon>
+          <div class="stat-value">{{ reviewStats.claimsApproved | number }}</div>
+          <div class="stat-label">Claims Approved</div>
+        </div>
+      </section>
+
+      <section class="stat-card" aria-label="Claims pending">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">schedule</mat-icon>
+          <div class="stat-value">{{ reviewStats.claimsPending | number }}</div>
+          <div class="stat-label">Claims Pending</div>
+        </div>
+      </section>
+
+      <section class="stat-card recovery" aria-label="Total recovery">
+        <div class="stat-card-content">
+          <mat-icon class="stat-icon">savings</mat-icon>
+          <div class="stat-value">${{ reviewStats.recoveryAmount | number: '1.2-2' }}</div>
+          <div class="stat-label">Total Recovery</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Review Progress Section -->
+    <section class="progress-card" aria-label="Review progress">
+      <div class="progress-card-header">
+        <mat-icon class="card-header-icon">show_chart</mat-icon>
+        <h3 class="progress-card-title">Review Progress</h3>
+      </div>
+      <div class="progress-card-content">
+        <div class="progress-bar-container">
+          <div class="progress-label">
+            <span>{{ reviewStats.totalReviewed }} of {{ reviewStats.totalFlagged }} reviewed</span>
+          </div>
+          <div class="progress-bar">
+            <div 
+              class="progress-fill" 
+              [style.width.%]="reviewStats.completionRate">
+            </div>
+          </div>
+          <div class="progress-percentage">
+            {{ reviewStats.completionRate | number: '1.1-1' }}% Complete
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div *ngIf="!isLoading && !reviewStats" class="no-data">
+    <mat-icon class="no-data-icon">assignment</mat-icon>
+    <p class="no-data-text">No review data available. Please upload transactions first.</p>
+  </div>
+</div>

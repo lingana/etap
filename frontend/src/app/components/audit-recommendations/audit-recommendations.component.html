@@ -1,0 +1,126 @@
+<div class="recommendations-container">
+  <div class="recommendations-header">
+    <h3>Recommended Actions</h3>
+    <button class="regenerate-btn" (click)="regenerate()" [disabled]="isLoading" title="Regenerate">
+      <mat-icon *ngIf="!isLoading">refresh</mat-icon>
+      <mat-icon *ngIf="isLoading" class="spinning">sync</mat-icon>
+      Regenerate
+    </button>
+  </div>
+
+  <div *ngIf="isLoading" class="recommendations-loading">
+    <div class="spinner"></div>
+    <p>Analyzing audit data for recommendations...</p>
+  </div>
+
+  <div *ngIf="!isLoading && hasError" class="recommendations-error">
+    <mat-icon class="error-icon">warning</mat-icon>
+    <p>{{ errorMessage }}</p>
+    <button class="retry-btn" (click)="regenerate()">Try Again</button>
+  </div>
+
+  <div *ngIf="!isLoading && !hasError && recommendations.length > 0" class="recommendations-list">
+    <!-- HIGH PRIORITY -->
+    <div *ngIf="getRecommendationsByPriority('HIGH').length > 0" class="priority-group">
+      <button class="priority-header high-priority" 
+              (click)="togglePriority('HIGH')"
+              [class.expanded]="expandedPriority === 'HIGH'">
+        <mat-icon class="priority-icon">circle</mat-icon>
+        <span class="priority-title">HIGH PRIORITY</span>
+        <span class="priority-count">({{ getRecommendationsByPriority('HIGH').length }})</span>
+        <span class="expand-icon">{{ expandedPriority === 'HIGH' ? '▼' : '▶' }}</span>
+      </button>
+      <div class="priority-content" *ngIf="expandedPriority === 'HIGH'">
+        <div *ngFor="let rec of getRecommendationsByPriority('HIGH')" class="recommendation-item">
+          <div class="recommendation-title">{{ rec.title }}</div>
+          <div class="recommendation-description">{{ rec.description }}</div>
+          <ul class="action-items">
+            <li *ngFor="let action of rec.actionItems" 
+                class="action-item"
+                (mouseenter)="hoveredItem = action"
+                (mouseleave)="hoveredItem = null">
+              <span class="bullet">•</span>
+              <span class="action-text">{{ action }}</span>
+              <button class="copy-btn" 
+                      *ngIf="hoveredItem === action"
+                      (click)="copyToClipboard(action)"
+                      title="Copy">
+                📋
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIUM PRIORITY -->
+    <div *ngIf="getRecommendationsByPriority('MEDIUM').length > 0" class="priority-group">
+      <button class="priority-header medium-priority" 
+              (click)="togglePriority('MEDIUM')"
+              [class.expanded]="expandedPriority === 'MEDIUM'">
+        <mat-icon class="priority-icon">circle</mat-icon>
+        <span class="priority-title">MEDIUM PRIORITY</span>
+        <span class="priority-count">({{ getRecommendationsByPriority('MEDIUM').length }})</span>
+        <span class="expand-icon">{{ expandedPriority === 'MEDIUM' ? '▼' : '▶' }}</span>
+      </button>
+      <div class="priority-content" *ngIf="expandedPriority === 'MEDIUM'">
+        <div *ngFor="let rec of getRecommendationsByPriority('MEDIUM')" class="recommendation-item">
+          <div class="recommendation-title">{{ rec.title }}</div>
+          <div class="recommendation-description">{{ rec.description }}</div>
+          <ul class="action-items">
+            <li *ngFor="let action of rec.actionItems" 
+                class="action-item"
+                (mouseenter)="hoveredItem = action"
+                (mouseleave)="hoveredItem = null">
+              <span class="bullet">•</span>
+              <span class="action-text">{{ action }}</span>
+              <button class="copy-btn" 
+                      *ngIf="hoveredItem === action"
+                      (click)="copyToClipboard(action)"
+                      title="Copy">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOW PRIORITY -->
+    <div *ngIf="getRecommendationsByPriority('LOW').length > 0" class="priority-group">
+      <button class="priority-header low-priority" 
+              (click)="togglePriority('LOW')"
+              [class.expanded]="expandedPriority === 'LOW'">
+        <mat-icon class="priority-icon">circle</mat-icon>
+        <span class="priority-title">LOW PRIORITY</span>
+        <span class="priority-count">({{ getRecommendationsByPriority('LOW').length }})</span>
+        <span class="expand-icon">{{ expandedPriority === 'LOW' ? '▼' : '▶' }}</span>
+      </button>
+      <div class="priority-content" *ngIf="expandedPriority === 'LOW'">
+        <div *ngFor="let rec of getRecommendationsByPriority('LOW')" class="recommendation-item">
+          <div class="recommendation-title">{{ rec.title }}</div>
+          <div class="recommendation-description">{{ rec.description }}</div>
+          <ul class="action-items">
+            <li *ngFor="let action of rec.actionItems" 
+                class="action-item"
+                (mouseenter)="hoveredItem = action"
+                (mouseleave)="hoveredItem = null">
+              <span class="bullet">•</span>
+              <span class="action-text">{{ action }}</span>
+              <button class="copy-btn" 
+                      *ngIf="hoveredItem === action"
+                      (click)="copyToClipboard(action)"
+                      title="Copy">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && !hasError && recommendations.length === 0 && stats" class="recommendations-empty">
+    <p>Click "Regenerate" to generate recommendations</p>
+  </div>
+</div>

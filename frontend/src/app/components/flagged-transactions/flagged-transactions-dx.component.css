@@ -1,0 +1,218 @@
+/* DevExtreme Theme Customization for Azure DevOps Style */
+
+/* Container */
+.flagged-container {
+  padding: 24px;
+  background: #f8f9fb;
+  min-height: 100%;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Risk Score Badge */
+.risk-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.risk-score-badge.risk-high {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.risk-score-badge.risk-medium {
+  background-color: #fefce8;
+  color: #ca8a04;
+  border: 1px solid #fde047;
+}
+
+.risk-score-badge.risk-low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* Confidence Badge */
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.confidence-badge.confidence-high {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.confidence-badge.confidence-medium {
+  background-color: #e0e7ff;
+  color: #6366f1;
+}
+
+.confidence-badge.confidence-low {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.813rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.status-badge.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-approved {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.status-reviewing {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Review Status Icons */
+.reviewed-icon {
+  color: #16a34a;
+  font-size: 20px;
+}
+
+.pending-icon {
+  color: #94a3b8;
+  font-size: 20px;
+}
+
+/* Grid Wrapper — shared DX base styles are in global styles.css */
+dx-data-grid {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.loading-text {
+  margin-top: 16px;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  color: #ccc;
+}
+
+.empty-state-title {
+  margin-top: 16px;
+  color: #666;
+  font-weight: 500;
+}
+
+.empty-state-subtitle {
+  color: #999;
+  font-size: 0.875rem;
+}
+
+/* Transaction Detail Panel */
+::ng-deep .detail-panel {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 600px;
+  background: white;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  ::ng-deep .detail-panel {
+    width: 100%;
+  }
+}

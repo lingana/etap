@@ -1,0 +1,43 @@
+<div class="summary-container">
+  <div class="summary-header">
+    <h3>Audit Summary</h3>
+    <div class="header-actions">
+      <button class="action-btn" (click)="regenerateSummary()" [disabled]="isLoading" title="Regenerate">
+        <mat-icon *ngIf="!isLoading">refresh</mat-icon>
+        <mat-icon *ngIf="isLoading" class="spinning">sync</mat-icon>
+      </button>
+      <button class="action-btn" (click)="copySummaryToClipboard()" [disabled]="!summary" title="Copy">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button class="action-btn" (click)="downloadSummary()" [disabled]="!summary" title="Download">
+        <mat-icon>download</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-period">
+    <span class="period-label">Period:</span>
+    <span>{{ startDate | date: 'MMM dd, yyyy' }} - {{ endDate | date: 'MMM dd, yyyy' }}</span>
+  </div>
+
+  <div *ngIf="isLoading" class="summary-loading">
+    <div class="spinner"></div>
+    <p>Generating audit summary...</p>
+  </div>
+
+  <div *ngIf="!isLoading && hasError" class="summary-error">
+    <mat-icon class="error-icon">warning</mat-icon>
+    <p>{{ errorMessage }}</p>
+    <button class="retry-btn" (click)="regenerateSummary()">Try Again</button>
+  </div>
+
+  <div *ngIf="!isLoading && !hasError && summary" class="summary-content">
+    <div class="summary-text">
+      {{ summary }}
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && !hasError && !summary && stats" class="summary-empty">
+    <p>Click "Regenerate" to create a new summary</p>
+  </div>
+</div>

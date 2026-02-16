@@ -1,0 +1,94 @@
+.logout-dialog {
+  padding: 0;
+  width: 100%;
+  max-width: 400px;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.warning-icon {
+  font-size: 56px;
+  width: 56px;
+  height: 56px;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.dialog-message {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.dialog-subtext {
+  margin: 0;
+  font-size: 14px;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+.cancel-btn,
+.confirm-btn {
+  min-width: auto;
+  padding: 10px 16px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancel-btn {
+  color: var(--gray-500);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--gray-300);
+}
+
+.cancel-btn:hover {
+  background-color: var(--gray-100);
+}
+
+.confirm-btn {
+  background-color: var(--danger);
+  color: var(--bg-primary);
+  border: none;
+  font-weight: 500;
+}
+
+.confirm-btn:hover {
+  background-color: var(--danger-dark);
+}
+
+.cancel-btn mat-icon,
+.confirm-btn mat-icon {
+  margin: 0;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+.confirm-btn mat-icon {
+  color: var(--bg-primary);
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .logout-dialog {
+    max-width: 90vw;
+  }
+
+  .cancel-btn,
+  .confirm-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

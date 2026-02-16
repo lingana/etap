@@ -1,0 +1,179 @@
+<app-toast></app-toast>
+
+<!-- Skip to Main Content Link (for keyboard navigation) -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- LOGIN PAGE -->
+<app-login *ngIf="currentPage === 'login'" (loginSuccess)="onLoginSuccess()">
+</app-login>
+
+<!-- TAX SELECTION PAGE -->
+<app-tax-selection *ngIf="currentPage === 'tax-selection'" (engagementSelected)="onEngagementSelected($event)">
+</app-tax-selection>
+
+<!-- DASHBOARD PAGE -->
+<div *ngIf="currentPage === 'dashboard'" class="app-wrapper">
+  <!-- Clean Top Navigation Bar -->
+  <header class="top-navbar">
+    <div class="navbar-left">
+      <button mat-icon-button class="mobile-menu-btn" (click)="toggleSidebar()" *ngIf="isMobile">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <div class="page-title">
+        <h1>{{ getCurrentPageTitle() }}</h1>
+      </div>
+    </div>
+
+    <div class="navbar-right">
+      <!-- AI Assistant -->
+      <button mat-icon-button class="ai-assistant-btn" (click)="openAuditAIChat()" 
+        [attr.aria-label]="'Open AI Audit Assistant'" [disabled]="isAILoading">
+        <mat-icon *ngIf="!isAILoading">smart_toy</mat-icon>
+        <mat-icon *ngIf="isAILoading" class="rotating">refresh</mat-icon>
+      </button>
+
+      <!-- User Account Menu -->
+      <button mat-icon-button disableRipple class="user-account-btn" [matMenuTriggerFor]="userMenu"
+        [attr.aria-label]="'User account menu for {{ currentUser?.fullName || \'User\' }}'">
+        <mat-icon>account_circle</mat-icon>
+        <!-- Online status indicator -->
+        <span class="status-indicator online" *ngIf="currentUser"></span>
+      </button>
+
+      <mat-menu #userMenu="matMenu" class="user-account-menu" xPosition="before">
+        <div class="user-menu-header">
+          <div class="user-avatar-large">
+            <mat-icon>account_circle</mat-icon>
+            <span class="status-indicator online"></span>
+          </div>
+          <div class="user-details">
+            <h4 class="user-full-name">{{ currentUser?.fullName || 'User' }}</h4>
+            <p class="user-email">{{ currentUser?.email || 'user@example.com' }}</p>
+            <span class="user-role-badge">{{ getRoleName(currentUser?.role) }}</span>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <button mat-menu-item (click)="logout()" class="menu-item-danger">
+          <mat-icon>logout</mat-icon>
+          <span>Sign Out</span>
+        </button>
+      </mat-menu>
+    </div>
+  </header>
+
+  <!-- Azure DevOps-inspired Sidebar -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation" 
+    [class.collapsed]="sidebarCollapsed" [class.open]="sidebarOpen">
+    <nav class="sidebar-nav" aria-label="Primary">
+      <!-- Core Workflow -->
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/overview" routerLinkActive="active"
+        [attr.aria-label]="'Overview'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>home</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Overview</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/upload" routerLinkActive="active"
+        [attr.aria-label]="'Upload Data'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>publish</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Upload Data</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/flagged" routerLinkActive="active"
+        [attr.aria-label]="'Flagged Items'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>warning</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Flagged Items</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/refund-claims" routerLinkActive="active"
+        [attr.aria-label]="'Refund Claims'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>request_quote</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Refund Claims</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/recovery" routerLinkActive="active"
+        [attr.aria-label]="'Recovery Dashboard'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>account_balance</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Recovery Dashboard</span>
+      </button>
+
+      <!-- Divider between nav groups -->
+      <div class="nav-group-divider"></div>
+
+      <!-- Analysis & Monitoring -->
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/analytics" routerLinkActive="active"
+        [attr.aria-label]="'Reports & Analytics'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>bar_chart</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Reports</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/activity" routerLinkActive="active"
+        [attr.aria-label]="'Activity Log'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>history</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Activity Log</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/systems" routerLinkActive="active"
+        [attr.aria-label]="'System Status'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>hub</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">System Status</span>
+      </button>
+    </nav>
+
+    <!-- Bottom Section: Toggle + User -->
+    <div class="sidebar-bottom-section">
+      <button type="button" class="sidebar-toggle-btn"
+        (click)="toggleSidebarCollapse()"
+        [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        [attr.aria-expanded]="!sidebarCollapsed">
+        <mat-icon class="chevron-icon" [class.rotated]="sidebarCollapsed">chevron_left</mat-icon>
+        <span class="toggle-label" *ngIf="!sidebarCollapsed">Collapse</span>
+      </button>
+      <div class="sidebar-user-section" *ngIf="currentUser">
+        <div class="user-top">
+          <div class="user-avatar" aria-hidden="true">
+            <span class="avatar-initials">{{ getUserInitials(currentUser) }}</span>
+          </div>
+          <div class="user-right" *ngIf="!sidebarCollapsed">
+            <div class="user-meta">
+              <p class="user-name">{{ currentUser.fullName }}</p>
+              <p class="user-role">{{ getRoleName(currentUser.role) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sign Out -->
+        <button class="logout-btn" (click)="logout()" aria-label="Sign out"
+          [class.only-icon]="sidebarCollapsed">
+          <mat-icon>logout</mat-icon>
+          <span class="logout-label" *ngIf="!sidebarCollapsed">Sign Out</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content devops-style" id="main-content" [class.sidebar-collapsed]="sidebarCollapsed">
+    <!-- Content Area -->
+    <div class="content-area" [class.sidebar-collapsed]="sidebarCollapsed && !isMobile">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <!-- Floating Chat with Audit AI Button -->
+  <button *ngIf="currentPage === 'dashboard'" class="chat-ai-btn" mat-fab color="primary" (click)="openAuditAIChat()"
+    aria-label="Chat with Audit AI">
+    <mat-icon>chat</mat-icon>
+  </button>
+</div>

@@ -1,0 +1,39 @@
+frontend/.angular/cache/
+# Ignore node_modules for all JS/TS projects
+node_modules/
+frontend/.angular/
+cache/
+
+# Ignore Python virtual environments
+.venv/
+venv/
+
+# Ignore environment and IDE files
+.env
+*.env
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Ignore build outputs
+dist/
+build/
+bin/
+obj/
+
+# Ignore log files
+*.log
+
+# Ignore coverage reports
+coverage/
+*.lcov
+
+# Ignore OS generated files
+*.swp
+*.swo
+/DEVELOPER_GUIDE.md
+/POWERBI_IMPLEMENTATION_SUMMARY.md
+/POWERBI_INTEGRATION.md
+/POWERBI_QUICKSTART.md
+/UX_ENHANCEMENT_ROADMAP.md

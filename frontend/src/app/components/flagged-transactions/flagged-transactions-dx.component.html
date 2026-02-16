@@ -1,0 +1,363 @@
+<div class="flagged-container">
+  <!-- Header -->
+
+  <div class="page-header">
+    <h2>
+      <mat-icon>warning</mat-icon>
+      Flagged Transactions
+    </h2>
+    <div class="engagement-label" style="margin-top: 4px; margin-bottom: 8px; font-size: 15px; color: #2563eb; display: flex; align-items: center; gap: 8px;">
+      <mat-icon style="font-size: 20px;">groups</mat-icon>
+      <span><strong>Current Engagement:</strong></span>
+      <span style="font-weight: 500;">{{ getEngagementLabel() }}</span>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="onAutoReview()" [disabled]="isBulkReviewing || selectedCount === 0">
+        <mat-icon>smart_toy</mat-icon>
+        AI Review Selected ({{selectedCount}})
+      </button>
+      <button mat-raised-button color="accent" (click)="generateRefundClaim()" [disabled]="selectedCount === 0">
+        <mat-icon>request_quote</mat-icon>
+        Generate Refund Claim ({{selectedCount}})
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p class="loading-text">Loading transactions...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && flaggedTransactions.length === 0" class="empty-state">
+    <mat-icon class="empty-state-icon">info</mat-icon>
+    <h3 class="empty-state-title">No Flagged Transactions</h3>
+    <p class="empty-state-subtitle">Upload transaction data to see flagged items here.</p>
+  </div>
+
+  <!-- DevExtreme DataGrid -->
+  <dx-data-grid
+    *ngIf="!isLoading && flaggedTransactions.length > 0"
+    [dataSource]="flaggedTransactions"
+    [elementAttr]="{ class: 'flagged-grid' }"
+    [showBorders]="true"
+    [showRowLines]="true"
+    [showColumnLines]="true"
+    [rowAlternationEnabled]="true"
+    [hoverStateEnabled]="true"
+    [columnAutoWidth]="true"
+    [allowColumnReordering]="true"
+    [allowColumnResizing]="true"
+    columnResizingMode="widget"
+    [wordWrapEnabled]="false"
+    (onSelectionChanged)="onSelectionChanged($event)"
+    (onRowClick)="onRowClick($event)"
+    keyExpr="recordID"
+    height="calc(100vh - 260px)">
+    
+
+    <!-- Selection -->
+    <dxo-selection
+      mode="multiple"
+      [selectAllMode]="'page'"
+      [showCheckBoxesMode]="'always'">
+    </dxo-selection>
+
+    <!-- Column Chooser -->
+    <dxo-column-chooser [enabled]="true" mode="select">
+      <dxo-popup container="body"></dxo-popup>
+    </dxo-column-chooser>
+
+    <!-- Search Panel -->
+    <dxo-search-panel [visible]="true" [width]="300" placeholder="Search transactions..."></dxo-search-panel>
+
+    <!-- Filter Row -->
+    <dxo-filter-row [visible]="true"></dxo-filter-row>
+
+    <!-- Header Filter -->
+    <dxo-header-filter [visible]="true">
+      <dxo-search [enabled]="true"></dxo-search>
+      <dxo-popup container="body"></dxo-popup>
+    </dxo-header-filter>
+
+    <!-- Grouping -->
+    <dxo-grouping [autoExpandAll]="false"></dxo-grouping>
+    <dxo-group-panel [visible]="true"></dxo-group-panel>
+
+    <!-- Paging -->
+    <dxo-paging [pageSize]="25"></dxo-paging>
+    <dxo-pager
+      [showPageSizeSelector]="true"
+      [allowedPageSizes]="[10, 25, 50, 100]"
+      [showInfo]="true"
+      [showNavigationButtons]="true">
+    </dxo-pager>
+
+    <!-- Sorting -->
+    <dxo-sorting mode="multiple"></dxo-sorting>
+
+    <!-- Export -->
+    <dxo-export
+      [enabled]="true"
+      [fileName]="'Flagged_Transactions_' + (currentDate | date:'yyyy-MM-dd')">
+    </dxo-export>
+
+    <!-- Columns -->
+    <dxi-column
+      dataField="recordID"
+      caption="ID"
+      [width]="80"
+      alignment="center"
+      [allowFiltering]="false">
+    </dxi-column>
+
+    <dxi-column
+      dataField="transactionNumber"
+      caption="Transaction #"
+      [width]="150">
+    </dxi-column>
+
+    <dxi-column
+      dataField="transactionDate"
+      caption="Date"
+      dataType="date"
+      format="MM/dd/yyyy"
+      [width]="120">
+    </dxi-column>
+
+    <dxi-column
+      dataField="merchantName"
+      caption="Merchant"
+      [width]="200">
+    </dxi-column>
+
+    <dxi-column
+      dataField="merchantState"
+      caption="State"
+      [width]="80"
+      alignment="center">
+    </dxi-column>
+
+    <dxi-column
+      dataField="fuelType"
+      caption="Fuel Type"
+      [width]="130">
+    </dxi-column>
+
+    <dxi-column
+      dataField="quantity"
+      caption="Gallons"
+      dataType="number"
+      format="#,##0.00"
+      [width]="110"
+      alignment="right">
+    </dxi-column>
+
+    <dxi-column
+      dataField="netCost"
+      caption="Amount"
+      dataType="number"
+      format="currency"
+      [width]="120"
+      alignment="right">
+    </dxi-column>
+
+    <dxi-column
+      dataField="totalTaxAmount"
+      caption="Tax Paid"
+      dataType="number"
+      format="currency"
+      [width]="110"
+      alignment="right">
+    </dxi-column>
+
+    <dxi-column
+      dataField="expectedTaxAmount"
+      caption="Expected Tax"
+      dataType="number"
+      format="currency"
+      [width]="120"
+      alignment="right"
+      [visible]="false">
+    </dxi-column>
+
+    <dxi-column
+      dataField="taxDifference"
+      caption="Tax Difference"
+      dataType="number"
+      format="currency"
+      [width]="130"
+      alignment="right"
+      cellTemplate="taxDifferenceTemplate">
+    </dxi-column>
+
+    <dxi-column
+      dataField="anomalyScore"
+      caption="Risk Score"
+      dataType="number"
+      format="#,##0.00"
+      [width]="110"
+      alignment="center"
+      [calculateCellValue]="calculateRiskScore"
+      cellTemplate="riskScoreTemplate"
+      [allowGrouping]="false">
+    </dxi-column>
+
+    <dxi-column
+      dataField="confidence"
+      caption="AI Confidence"
+      dataType="number"
+      format="percent"
+      [width]="130"
+      alignment="center"
+      cellTemplate="confidenceTemplate">
+    </dxi-column>
+
+    <dxi-column
+      dataField="predictedClaimType"
+      caption="Claim Type"
+      [width]="150">
+      <dxo-lookup
+        [dataSource]="claimTypes"
+        valueExpr="value"
+        displayExpr="text">
+      </dxo-lookup>
+    </dxi-column>
+
+    <dxi-column
+      dataField="claimAmount"
+      caption="Potential Recovery"
+      dataType="number"
+      format="currency"
+      [width]="140"
+      alignment="right">
+    </dxi-column>
+
+    <dxi-column
+      dataField="anomalyReason"
+      caption="Reason"
+      [width]="250"
+      [visible]="false">
+    </dxi-column>
+
+    <dxi-column
+      dataField="isReviewed"
+      caption="Review Status"
+      dataType="boolean"
+      [width]="130"
+      cellTemplate="reviewStatusTemplate">
+    </dxi-column>
+
+    <dxi-column
+      dataField="status"
+      caption="Status"
+      [width]="120"
+      cellTemplate="statusTemplate">
+    </dxi-column>
+
+    <dxi-column
+      type="buttons"
+      caption="Actions"
+      [width]="160"
+      [fixed]="true"
+      fixedPosition="right">
+      <dxi-button
+        hint="Review with AI"
+        icon="checklist"
+        [visible]="isNotReviewed"
+        [onClick]="onReviewClick">
+      </dxi-button>
+      <dxi-button
+        hint="Approve"
+        icon="check"
+        [visible]="isNotReviewed"
+        [onClick]="onApproveClick">
+      </dxi-button>
+      <dxi-button
+        hint="Reject"
+        icon="close"
+        [visible]="isNotReviewed"
+        [onClick]="onRejectClick">
+      </dxi-button>
+      <dxi-button
+        hint="View Details"
+        icon="info"
+        [onClick]="onViewDetailsClick">
+      </dxi-button>
+    </dxi-column>
+
+    <!-- Cell Templates -->
+    <div *dxTemplate="let cellData of 'riskScoreTemplate'">
+      <div class="risk-score-badge" [ngClass]="getRiskClass(cellData.value)">
+        {{ (cellData.value * 100) | number:'1.0-0' }}%
+      </div>
+    </div>
+
+    <div *dxTemplate="let cellData of 'confidenceTemplate'">
+      <div class="confidence-badge" [ngClass]="getConfidenceClass(cellData.value)">
+        {{ cellData.value | percent:'1.0-0' }}
+      </div>
+    </div>
+
+    <div *dxTemplate="let cellData of 'reviewStatusTemplate'">
+      <mat-icon [class]="cellData.value ? 'reviewed-icon' : 'pending-icon'">
+        {{ cellData.value ? 'check_circle' : 'pending' }}
+      </mat-icon>
+    </div>
+
+    <div *dxTemplate="let cellData of 'statusTemplate'">
+      <span class="status-badge" [ngClass]="'status-' + cellData.value?.toLowerCase()">
+        {{ cellData.value || 'PENDING' }}
+      </span>
+    </div>
+
+    <div *dxTemplate="let cellData of 'taxDifferenceTemplate'">
+      <span [style.color]="cellData.value > 0 ? '#16a34a' : (cellData.value < 0 ? '#dc2626' : '#6b7280')" 
+            [style.font-weight]="cellData.value !== 0 ? '600' : 'normal'">
+        {{ cellData.value | currency }}
+      </span>
+    </div>
+
+    <!-- Summary -->
+    <dxo-summary>
+      <dxi-total-item
+        column="recordID"
+        summaryType="count"
+        displayFormat="{0} transactions">
+      </dxi-total-item>
+      <dxi-total-item
+        column="quantity"
+        summaryType="sum"
+        valueFormat="#,##0.00"
+        displayFormat="Total: {0} gal">
+      </dxi-total-item>
+      <dxi-total-item
+        column="netCost"
+        summaryType="sum"
+        valueFormat="currency"
+        displayFormat="Total: {0}">
+      </dxi-total-item>
+      <dxi-total-item
+        column="totalTaxAmount"
+        summaryType="sum"
+        valueFormat="currency"
+        displayFormat="Tax: {0}">
+      </dxi-total-item>
+      <dxi-total-item
+        column="claimAmount"
+        summaryType="sum"
+        valueFormat="currency"
+        displayFormat="Recovery: {0}">
+      </dxi-total-item>
+    </dxo-summary>
+
+  </dx-data-grid>
+</div>
+<!-- Transaction Detail Panel -->
+<div *ngIf="selectedTransaction" class="detail-panel">
+  <app-transaction-detail 
+    [transaction]="selectedTransaction"
+    (close)="closeDetails()">
+  </app-transaction-detail>
+</div>

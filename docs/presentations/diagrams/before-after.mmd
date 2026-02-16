@@ -1,0 +1,26 @@
+graph LR
+    subgraph Before["WITHOUT AI - Traditional Process"]
+        B1[Upload Data<br/>Manual] --> B2[Review Each<br/>Transaction<br/>15 min each]
+        B2 --> B3[Research Tax<br/>Rates<br/>30 min]
+        B3 --> B4[Calculate<br/>Variance<br/>Manual math]
+        B4 --> B5[Check IRS<br/>Rules<br/>Search docs]
+        B5 --> B6[Make Decision<br/>Hope it's right]
+        B6 --> B7[Document<br/>Reasoning<br/>Write notes]
+    end
+    
+    subgraph After["WITH AI - Automated Process"]
+        A1[Upload Data<br/>AI Validated] --> A2[AI Flags<br/>Anomalies<br/>Instant]
+        A2 --> A3[AI Fetches<br/>IRS Rates<br/>Real-time]
+        A3 --> A4[AI Calculates<br/>Everything<br/>Perfect accuracy]
+        A4 --> A5[AI Checks<br/>Compliance<br/>Auto-citations]
+        A5 --> A6[AI Recommends<br/>Decision<br/>94% confidence]
+        A6 --> A7[Auto-documented<br/>Full audit trail]
+    end
+    
+    B7 -.->|6 hours per audit| Time1[❌ Slow & Error-prone]
+    A7 -.->|12 minutes per audit| Time2[✅ Fast & Accurate]
+    
+    style Before fill:#fee2e2
+    style After fill:#d1fae5
+    style Time1 fill:#fca5a5,color:#000
+    style Time2 fill:#34d399,color:#000

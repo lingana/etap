@@ -1,0 +1,15 @@
+graph LR
+    A[Tax Type Cards] --> B{AI Analysis}
+    B --> C[Live IRS Rates]
+    B --> D[AI Insights]
+    B --> E[Data Source Toggle]
+    
+    C --> F[Display Current Rates]
+    D --> G[Show Recommendations]
+    E --> H{IRS Mode}
+    
+    H -->|Live| I[Real-time IRS Data]
+    H -->|Cached| J[Database Rates]
+    
+    style B fill:#667eea
+    style D fill:#764ba2

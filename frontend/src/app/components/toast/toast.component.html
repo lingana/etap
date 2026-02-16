@@ -1,0 +1,21 @@
+<div class="toast-container" role="region" aria-live="polite" aria-atomic="true">
+  <div *ngFor="let toast of toasts" [ngClass]="getToastClass(toast.type)" class="toast-item"
+       [class.dismissing]="isDismissing(toast.id)"
+       [attr.role]="'alert'"
+       [attr.aria-label]="toast.type + ': ' + toast.message">
+    <div class="toast-content">
+      <mat-icon class="toast-icon" aria-hidden="true">
+        {{ toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : toast.type === 'warning' ? 'warning' : 'info' }}
+      </mat-icon>
+      <span class="toast-message">{{ toast.message }}</span>
+      <button *ngIf="toast.action" mat-button class="toast-action" 
+              (click)="onActionClick(toast)">
+        {{ toast.action }}
+      </button>
+    </div>
+    <button mat-icon-button (click)="removeToast(toast.id)" class="toast-close"
+            [attr.aria-label]="'Close ' + toast.type + ' notification'">
+      <mat-icon aria-hidden="true">close</mat-icon>
+    </button>
+  </div>
+</div>

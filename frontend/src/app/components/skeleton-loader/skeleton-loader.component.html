@@ -1,0 +1,50 @@
+<div [ngSwitch]="type" class="skeleton-container">
+  <!-- Table Skeleton -->
+  <table *ngSwitchCase="'table'" class="skeleton-table" role="status" aria-label="Loading data">
+    <thead>
+      <tr>
+        <th *ngFor="let col of getColumns()" class="skeleton-cell-header">
+          <div class="skeleton-text skeleton-text-header"></div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of getRows()" class="skeleton-row">
+        <td *ngFor="let col of getColumns()" class="skeleton-cell">
+          <div class="skeleton-text"></div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Card Skeleton -->
+  <div *ngSwitchCase="'card'" class="skeleton-card">
+    <div class="skeleton-card-header">
+      <div class="skeleton-text skeleton-text-title"></div>
+      <div class="skeleton-text skeleton-text-subtitle"></div>
+    </div>
+    <div class="skeleton-card-body">
+      <div class="skeleton-text skeleton-text-full"></div>
+      <div class="skeleton-text skeleton-text-full"></div>
+      <div class="skeleton-text skeleton-text-half"></div>
+    </div>
+  </div>
+
+  <!-- List Skeleton -->
+  <div *ngSwitchCase="'list'" class="skeleton-list" role="status" aria-label="Loading list">
+    <div *ngFor="let item of getRows()" class="skeleton-list-item">
+      <div class="skeleton-avatar"></div>
+      <div class="skeleton-list-content">
+        <div class="skeleton-text skeleton-text-full"></div>
+        <div class="skeleton-text skeleton-text-half"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paragraph Skeleton -->
+  <div *ngSwitchCase="'paragraph'" class="skeleton-paragraph" role="status" aria-label="Loading content">
+    <div class="skeleton-text skeleton-text-full"></div>
+    <div class="skeleton-text skeleton-text-full"></div>
+    <div class="skeleton-text skeleton-text-half"></div>
+  </div>
+</div>

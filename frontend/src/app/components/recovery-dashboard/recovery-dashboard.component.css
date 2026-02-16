@@ -1,0 +1,270 @@
+.recovery-dashboard {
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+}
+
+.dashboard-header h3 {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-bottom: 4px;
+}
+
+.dashboard-header p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Metric Cards - Microsoft Fluent Style */
+.metric-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-light);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.metric-icon {
+  font-size: 2.5rem;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+/* Use app color scheme instead of gradients */
+.total-claimed .metric-icon {
+  background-color: var(--primary);
+  color: var(--bg-primary);
+}
+
+.approved .metric-icon {
+  background-color: var(--success);
+  color: var(--bg-primary);
+}
+
+.recovered .metric-icon {
+  background-color: var(--primary-dark);
+  color: var(--bg-primary);
+}
+
+.pending .metric-icon {
+  background-color: var(--warning);
+  color: var(--bg-primary);
+}
+
+.metric-content h6 {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+.metric-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.metric-content small {
+  color: var(--text-tertiary);
+  font-size: 0.813rem;
+}
+
+/* Cards */
+.card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-primary);
+  margin-bottom: 20px;
+}
+
+.card-header {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 8px 8px 0 0 !important;
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 20px;
+}
+
+.card-header h6 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.938rem;
+  color: var(--text-primary);
+}
+
+.card-header .bi {
+  color: var(--primary);
+  margin-right: 8px;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+/* Status/Tax/Refund Items */
+.status-item, .tax-item, .refund-item {
+  margin-bottom: 16px;
+}
+
+.status-name, .tax-name, .refund-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+/* Progress Bars */
+.progress {
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.progress-bar {
+  background-color: var(--primary);
+  transition: width 0.3s ease;
+}
+
+/* Timeline */
+.timeline-item {
+  padding: 16px;
+  border-left: 3px solid var(--border-light);
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.timeline-item:before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 20px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  border: 2px solid var(--bg-primary);
+}
+
+.timeline-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.timeline-content h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.timeline-content p {
+  font-size: 0.813rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Loading State */
+.text-center {
+  color: var(--text-secondary);
+}
+
+.spinner-border {
+  color: var(--primary);
+}
+
+/* Breakdown Lists */
+.status-breakdown, .tax-type-breakdown, .refund-type-breakdown {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Scrollbar Styling */
+.status-breakdown::-webkit-scrollbar,
+.tax-type-breakdown::-webkit-scrollbar,
+.refund-type-breakdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.status-breakdown::-webkit-scrollbar-track,
+.tax-type-breakdown::-webkit-scrollbar-track,
+.refund-type-breakdown::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+.status-breakdown::-webkit-scrollbar-thumb,
+.tax-type-breakdown::-webkit-scrollbar-thumb,
+.refund-type-breakdown::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+
+.status-breakdown::-webkit-scrollbar-thumb:hover,
+.tax-type-breakdown::-webkit-scrollbar-thumb:hover,
+.refund-type-breakdown::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+
+.status-name, .tax-name, .refund-name {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.performance-metric h3 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 5px;
+}
+
+.performance-metric p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-lg {
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  font-weight: 500;
+}

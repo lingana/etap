@@ -1,0 +1,386 @@
+<div class="tax-selection-container">
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>Excise Tax Analytics Platform</h1>
+        <p class="subtitle">Select your tax type, client, and engagement to begin</p>
+      </div>
+      <div class="header-actions">
+        <div class="irs-data-controls">
+          <button mat-icon-button 
+                  (click)="refreshIRSData()" 
+                  [disabled]="isRefreshingIRSData"
+                  class="refresh-btn">
+            <mat-icon [class.spinning]="isRefreshingIRSData">refresh</mat-icon>
+          </button>
+          <mat-slide-toggle
+            [(ngModel)]="useLiveIRSData"
+            (change)="toggleIRSDataSource()"
+            color="primary"
+            class="irs-toggle">
+            <span class="toggle-label">
+              <mat-icon>{{ useLiveIRSData ? 'cloud_done' : 'storage' }}</mat-icon>
+              {{ useLiveIRSData ? 'Live IRS Data' : 'Cached Data' }}
+            </span>
+          </mat-slide-toggle>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breadcrumb Navigation -->
+  <div class="breadcrumb" *ngIf="selectedTaxType || selectedClient || selectedEngagement">
+    <div class="breadcrumb-item">
+      <span class="breadcrumb-label">Tax Type:</span>
+      <span *ngIf="selectedTaxType" class="breadcrumb-value">{{ selectedTaxType.name }}</span>
+      <span *ngIf="!selectedTaxType" class="breadcrumb-empty">Not selected</span>
+    </div>
+    <mat-icon class="breadcrumb-separator" *ngIf="selectedTaxType">chevron_right</mat-icon>
+    
+    <div class="breadcrumb-item" *ngIf="selectedTaxType">
+      <span class="breadcrumb-label">Client:</span>
+      <span *ngIf="selectedClient" class="breadcrumb-value">{{ selectedClient.name }}</span>
+      <span *ngIf="!selectedClient" class="breadcrumb-empty">Not selected</span>
+    </div>
+    <mat-icon class="breadcrumb-separator" *ngIf="selectedClient">chevron_right</mat-icon>
+    
+    <div class="breadcrumb-item" *ngIf="selectedClient">
+      <span class="breadcrumb-label">Engagement:</span>
+      <span *ngIf="selectedEngagement" class="breadcrumb-value">{{ selectedEngagement.engagementName }}</span>
+      <span *ngIf="!selectedEngagement" class="breadcrumb-empty">Not selected</span>
+    </div>
+  </div>
+
+  <div class="selection-grid">
+    <!-- Step 1: Tax Type Selection -->
+    <div class="selection-step">
+      <div class="step-header">
+        <span class="step-number">1</span>
+        <h2>Select Tax Type</h2>
+        <mat-icon class="step-indicator" *ngIf="isStep1Complete()">check_circle</mat-icon>
+      </div>
+
+      <div *ngIf="isLoadingTaxTypes" class="loading">
+        <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+        <p>Loading tax types...</p>
+      </div>
+
+      <div *ngIf="!isLoadingTaxTypes" class="tax-types-grid">
+        <button
+          *ngFor="let taxType of taxTypes"
+          (click)="selectTaxType(taxType)"
+          [class.selected]="selectedTaxType?.id === taxType.id"
+          class="tax-type-card"
+          type="button">
+          <mat-icon class="tax-icon">{{ getTaxTypeIcon(taxType) }}</mat-icon>
+          <div class="card-content">
+            <h3>{{ taxType.name }}</h3>
+            <p class="description">{{ taxType.description }}</p>
+            <div class="tax-metadata">
+              <span class="tax-rate">
+                <mat-icon class="rate-icon">account_balance</mat-icon>
+                Rate: {{ getIRSTaxRate(taxType) }}
+              </span>
+              <span class="data-source" *ngIf="getEnrichedData(taxType.id)?.irsRateData">
+                <mat-icon class="source-icon">
+                  {{ getEnrichedData(taxType.id)?.irsRateData?.source === 'IRS' ? 'cloud_done' : 'storage' }}
+                </mat-icon>
+                {{ getEnrichedData(taxType.id)?.irsRateData?.source === 'IRS' ? 'Live IRS Data' : 'Cached Data' }}
+              </span>
+            </div>
+            <div class="ai-insights-badge" *ngIf="getEnrichedData(taxType.id)?.aiInsights && getEnrichedData(taxType.id)!.aiInsights!.length > 0">
+              <mat-icon>psychology</mat-icon>
+              <span>{{ getEnrichedData(taxType.id)!.aiInsights!.length }} AI Insights Available</span>
+            </div>
+          </div>
+          <mat-icon class="check-icon" *ngIf="selectedTaxType?.id === taxType.id">check_circle</mat-icon>
+        </button>
+      </div>
+
+      <!-- Navigation buttons for Step 1 -->
+      <div class="step-navigation" *ngIf="isStep1Complete()">
+        <button mat-raised-button color="primary" (click)="goNext()">
+          <span>Next: Select Client</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Client Selection -->
+    <div class="selection-step" [class.disabled]="!selectedTaxType">
+      <div class="step-header">
+        <span class="step-number">2</span>
+        <h2>Select or Create Client</h2>
+        <mat-icon class="step-indicator" *ngIf="isStep2Complete()">check_circle</mat-icon>
+      </div>
+
+      <div *ngIf="!selectedTaxType" class="placeholder">
+        <p>Select a tax type first</p>
+      </div>
+
+      <div *ngIf="selectedTaxType && isLoadingClients" class="loading">
+        <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+        <p>Loading clients...</p>
+      </div>
+
+      <div *ngIf="selectedTaxType && !isLoadingClients" class="clients-list">
+        <div class="list-header">
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="clientSearchTerm" 
+              placeholder="Search by name or EIN..."
+              class="search-input">
+          </div>
+          <span class="list-count">{{ getFilteredClients().length }} of {{ clients.length }}</span>
+        </div>
+
+        <button
+          *ngFor="let client of getFilteredClients()"
+          (click)="selectClient(client)"
+          [class.selected]="selectedClient?.id === client.id"
+          class="client-card"
+          type="button">
+          <div class="card-header">
+            <h3>{{ client.name }}</h3>
+            <mat-icon class="check-icon" *ngIf="selectedClient?.id === client.id">check_circle</mat-icon>
+          </div>
+          <div class="card-details">
+            <p><strong>EIN:</strong> {{ client.ein }}</p>
+            <p><strong>Contact:</strong> {{ client.contactPerson }}</p>
+            <p><strong>Location:</strong> {{ client.city }}, {{ client.state }}</p>
+          </div>
+        </button>
+
+        <button
+          *ngIf="selectedTaxType"
+          (click)="openCreateClientModal()"
+          class="create-button"
+          type="button">
+          <mat-icon>add</mat-icon>
+          Create New Client
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Engagement Selection -->
+    <div class="selection-step" [class.disabled]="!selectedClient">
+      <div class="step-header">
+        <span class="step-number">3</span>
+        <h2>Select or Create Engagement</h2>
+        <mat-icon class="step-indicator" *ngIf="isStep3Complete()">check_circle</mat-icon>
+      </div>
+
+      <div *ngIf="!selectedClient" class="placeholder">
+        <p>Select a client first</p>
+      </div>
+
+      <div *ngIf="selectedClient && isLoadingEngagements" class="loading">
+        <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+        <p>Loading engagements...</p>
+      </div>
+
+      <!-- AI Recommendations -->
+      <div class="ai-recommendations" *ngIf="selectedClient && !isLoadingEngagements && aiEngagementRecommendations">
+        <div class="ai-header">
+          <mat-icon>psychology</mat-icon>
+          <h3>AI Recommendations</h3>
+        </div>
+        <div class="ai-insights">
+          <div class="insight-item priority" *ngIf="aiEngagementRecommendations.priorityEngagement">
+            <div class="insight-icon">
+              <mat-icon>priority_high</mat-icon>
+            </div>
+            <div class="insight-content">
+              <p class="insight-title">Priority Engagement</p>
+              <p class="insight-text">{{ aiEngagementRecommendations.priorityEngagement.name }} - {{ aiEngagementRecommendations.priorityEngagement.reason }}</p>
+              <button mat-button color="primary" (click)="selectEngagementById(aiEngagementRecommendations.priorityEngagement.id)">
+                <span>Select</span>
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="insight-item" *ngFor="let suggestion of aiEngagementRecommendations.suggestions">
+            <mat-icon [class]="'severity-' + suggestion.severity">{{ suggestion.icon }}</mat-icon>
+            <span>{{ suggestion.text }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="selectedClient && !isLoadingEngagements" class="engagements-list">
+        <div class="list-header">
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="engagementSearchTerm" 
+              placeholder="Search engagements..."
+              class="search-input">
+          </div>
+          <div class="filter-box">
+            <select [(ngModel)]="engagementStatusFilter" class="status-filter">
+              <option value="all">All Statuses</option>
+              <option *ngFor="let status of getUniqueEngagementStatuses()" [value]="status">
+                {{ status }}
+              </option>
+            </select>
+          </div>
+          <span class="list-count">{{ getFilteredEngagements().length }} of {{ engagements.length }}</span>
+        </div>
+
+        <button
+          *ngFor="let engagement of getFilteredEngagements()"
+          (click)="selectEngagement(engagement)"
+          [class.selected]="selectedEngagement?.id === engagement.id"
+          class="engagement-card"
+          type="button">
+          <div class="card-header">
+            <h3>{{ engagement.engagementName }}</h3>
+            <mat-icon class="check-icon" *ngIf="selectedEngagement?.id === engagement.id">check_circle</mat-icon>
+          </div>
+          <div class="card-details">
+            <p><strong>Fiscal Year:</strong> {{ engagement.fiscalYear }}</p>
+            <p><strong>Type:</strong> {{ engagement.engagementType }}</p>
+            <p><strong>Status:</strong> <span [class]="'status-' + engagement.status.toLowerCase()">{{ engagement.status }}</span></p>
+            <p *ngIf="engagement.estimatedPotentialRecovery > 0"><strong>Est. Recovery:</strong> ${{ engagement.estimatedPotentialRecovery | number:'1.2-2' }}</p>
+          </div>
+        </button>
+
+        <button
+          *ngIf="selectedClient"
+          (click)="openCreateEngagementModal()"
+          class="create-button"
+          type="button">
+          <mat-icon>add</mat-icon>
+          Create New Engagement
+        </button>
+      </div>
+
+      <!-- Navigation buttons for Step 3 -->
+      <div class="step-navigation" *ngIf="selectedClient">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          <span>Back</span>
+        </button>
+        <button mat-raised-button color="primary" (click)="proceedToDashboard()" [disabled]="!selectedEngagement">
+          <span>Proceed to Dashboard</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+
+  <!-- Create Client Modal -->
+  <div *ngIf="showCreateClientModal" class="modal-overlay" (click)="closeCreateClientModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Create New Client</h2>
+        <button (click)="closeCreateClientModal()" class="close-btn" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Company Name <span class="required-indicator">*</span></label>
+          <input type="text" [(ngModel)]="newClientForm.name" placeholder="Enter company name" />
+          <span class="field-hint">Required - Legal company name</span>
+        </div>
+        <div class="form-group">
+          <label>EIN <span class="required-indicator">*</span></label>
+          <input type="text" [(ngModel)]="newClientForm.ein" placeholder="XX-XXXXXXX" />
+          <span class="field-hint">Required - Employer Identification Number</span>
+        </div>
+        <div class="form-group">
+          <label>Industry</label>
+          <input type="text" [(ngModel)]="newClientForm.industry" placeholder="e.g., Petroleum, Distribution" />
+        </div>
+        <div class="form-group">
+          <label>Contact Person</label>
+          <input type="text" [(ngModel)]="newClientForm.contactPerson" placeholder="Full name" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" [(ngModel)]="newClientForm.contactEmail" placeholder="email@company.com" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" [(ngModel)]="newClientForm.contactPhone" placeholder="(555) 123-4567" />
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <input type="text" [(ngModel)]="newClientForm.address" placeholder="Street address" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" [(ngModel)]="newClientForm.city" placeholder="City" />
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <select [(ngModel)]="newClientForm.state">
+              <option value="CA">CA</option>
+              <option value="TX">TX</option>
+              <option value="NY">NY</option>
+              <option value="FL">FL</option>
+              <!-- Add more states as needed -->
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="closeCreateClientModal()" class="cancel-btn" type="button">Cancel</button>
+        <button (click)="createClient()" class="confirm-btn" type="button">Create Client</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Engagement Modal -->
+  <div *ngIf="showCreateEngagementModal" class="modal-overlay" (click)="closeCreateEngagementModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Create New Engagement</h2>
+        <button (click)="closeCreateEngagementModal()" class="close-btn" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Engagement Name <span class="required-indicator">*</span></label>
+          <input type="text" [(ngModel)]="newEngagementForm.engagementName" placeholder="FY 2024 Fuel Tax Audit" />
+          <span class="field-hint">Required - Descriptive engagement name</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fiscal Year <span class="required-indicator">*</span></label>
+            <input type="number" [(ngModel)]="newEngagementForm.fiscalYear" min="2000" max="2100" />
+            <span class="field-hint">2000-2100</span>
+          </div>
+          <div class="form-group">
+            <label>Engagement Type <span class="required-indicator">*</span></label>
+            <select [(ngModel)]="newEngagementForm.engagementType">
+              <option *ngFor="let type of engagementTypes" [value]="type.value">{{ type.label }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fiscal Year Start</label>
+            <input type="date" [(ngModel)]="newEngagementForm.fiscalYearStart" />
+          </div>
+          <div class="form-group">
+            <label>Fiscal Year End</label>
+            <input type="date" [(ngModel)]="newEngagementForm.fiscalYearEnd" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="newEngagementForm.description" placeholder="Engagement description" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="closeCreateEngagementModal()" class="cancel-btn" type="button">Cancel</button>
+        <button (click)="createEngagement()" class="confirm-btn" type="button">Create Engagement</button>
+      </div>
+    </div>
+  </div>
+</div>

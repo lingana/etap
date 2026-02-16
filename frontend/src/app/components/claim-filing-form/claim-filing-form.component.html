@@ -1,0 +1,272 @@
+<div class="claim-filing-container">
+  <!-- New Claim Generation View -->
+  <div *ngIf="isNewClaim && !claim" class="new-claim-wizard">
+    <div class="card">
+      <div class="card-header">
+        <h5>
+          <i class="bi bi-plus-circle"></i> Generate New Refund Claim
+        </h5>
+      </div>
+      <div class="card-body text-center py-5">
+        <i class="bi bi-file-earmark-plus display-1 text-primary mb-4"></i>
+        <h4>Ready to Generate Refund Claim</h4>
+        <p class="text-muted mb-4">
+          Generate a refund claim from {{ transactionIds.length }} selected transaction(s)
+        </p>
+        
+        <div *ngIf="error" class="alert alert-danger mb-4">
+          <i class="bi bi-exclamation-triangle"></i> {{ error }}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-center">
+          <button 
+            class="btn btn-primary btn-lg" 
+            (click)="generateClaimFromTransactions()"
+            [disabled]="generating"
+          >
+            <span *ngIf="!generating">
+              <i class="bi bi-magic"></i> Generate Claim
+            </span>
+            <span *ngIf="generating">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Generating...
+            </span>
+          </button>
+          <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
+            <i class="bi bi-arrow-left"></i> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Claim View -->
+  <div *ngIf="!loading && claim" class="existing-claim-view">
+  <div class="row">
+    <!-- Left Column: Claim Details -->
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>
+            <i class="bi bi-file-earmark-text"></i> Refund Claim Details
+            <span class="badge bg-info ms-2">{{ claim.claimNumber }}</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Claimant Information -->
+          <h6 class="mb-3">Claimant Information</h6>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">EIN <span class="text-danger" *ngIf="!isReadOnly">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="formData.ein" [readonly]="isReadOnly" 
+                     [class.is-invalid]="!formData.ein && formSubmitted" required />
+              <div class="invalid-feedback">EIN is required</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Name of Claimant <span class="text-danger" *ngIf="!isReadOnly">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="formData.nameOfClaimant" [readonly]="isReadOnly"
+                     [class.is-invalid]="!formData.nameOfClaimant && formSubmitted" required />
+              <div class="invalid-feedback">Claimant name is required</div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Address</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="formData.claimantAddress" [readonly]="isReadOnly"></textarea>
+          </div>
+
+          <h6 class="mb-3 mt-4">Contact Information</h6>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Contact Name</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.contactName" [readonly]="isReadOnly" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Phone</label>
+              <input type="tel" class="form-control" [(ngModel)]="formData.contactPhone" [readonly]="isReadOnly" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" [(ngModel)]="formData.contactEmail" [readonly]="isReadOnly" />
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Priority</label>
+              <select class="form-select" [(ngModel)]="formData.priority" [disabled]="isReadOnly">
+                <option [value]="1">1 - Critical</option>
+                <option [value]="2">2 - High</option>
+                <option [value]="3">3 - Medium</option>
+                <option [value]="4">4 - Low</option>
+                <option [value]="5">5 - Very Low</option>
+              </select>
+            </div>
+          </div>
+
+          <div *ngIf="isReadOnly" class="alert alert-info mb-3">
+            <i class="bi bi-lock"></i> This claim is in <strong>{{ claim?.status }}</strong> status and cannot be edited.
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" (click)="saveClaim()" [disabled]="saving || isReadOnly" *ngIf="!isReadOnly">
+              <i class="bi bi-save"></i> Save Changes
+            </button>
+            <button class="btn btn-outline-secondary" (click)="goBack()">
+              <i class="bi bi-arrow-left"></i> Back to List
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Justification Section -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6>Claim Justification</h6>
+        </div>
+        <div class="card-body">
+          <p>{{ claim.justification }}</p>
+          
+          <div *ngIf="claim.aiReasoning" class="mt-3">
+            <strong>AI Analysis:</strong>
+            <p class="text-muted">{{ claim.aiReasoning }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- IRS Citations -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6>IRS Citations & References</h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled">
+            <li *ngFor="let citation of claim.irsCitations | json">
+              <i class="bi bi-check-circle text-success"></i> {{ citation }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Summary & Actions -->
+    <div class="col-md-4">
+      <!-- Status Card -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6>Claim Status</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <strong>Current Status:</strong>
+            <br>
+            <span class="badge bg-{{ claim.status === 'Draft' ? 'secondary' : claim.status === 'Submitted' ? 'primary' : 'success' }} mt-1">
+              {{ claim.status }}
+            </span>
+          </div>
+          
+          <div class="mb-3">
+            <strong>Tax Type:</strong> {{ claim.taxType }}
+          </div>
+          
+          <div class="mb-3">
+            <strong>Tax Period:</strong>
+            <br>{{ claim.taxPeriodStart | date:'MM/dd/yyyy' }} - {{ claim.taxPeriodEnd | date:'MM/dd/yyyy' }}
+          </div>
+          
+          <div class="mb-3">
+            <strong>Tax Year:</strong> {{ claim.taxYear }} {{ claim.taxQuarter }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Summary -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6>Financial Summary</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Claimed Amount:</span>
+            <strong class="text-primary">${{ claim.claimedAmount | number:'1.2-2' }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Approved Amount:</span>
+            <strong class="text-success">${{ claim.approvedAmount | number:'1.2-2' }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Paid Amount:</span>
+            <strong class="text-info">${{ claim.paidAmount | number:'1.2-2' }}</strong>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+            <span>Transactions:</span>
+            <strong>{{ claim.transactionCount }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Confidence -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6>AI Confidence</h6>
+        </div>
+        <div class="card-body">
+          <div class="progress mb-2">
+            <div 
+              class="progress-bar bg-{{ claim.confidenceScore >= 0.8 ? 'success' : claim.confidenceScore >= 0.6 ? 'warning' : 'danger' }}"
+              [style.width.%]="claim.confidenceScore * 100"
+            >
+              {{ claim.confidenceScore | percent }}
+            </div>
+          </div>
+          <p class="small text-muted" *ngIf="claim.aiRecommendation">
+            {{ claim.aiRecommendation }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="card">
+        <div class="card-header">
+          <h6>Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button 
+              class="btn btn-success" 
+              (click)="markReadyToFile()"
+              *ngIf="claim.status === 'Draft'"
+              [disabled]="saving"
+            >
+              <i class="bi bi-check-circle"></i> Mark Ready to File
+            </button>
+            
+            <button 
+              class="btn btn-warning" 
+              (click)="generateAndDownloadForm()"
+              *ngIf="claim.status !== 'Draft'"
+            >
+              <i class="bi bi-file-pdf"></i> Generate Form 8849
+            </button>
+            
+            <button 
+              class="btn btn-primary" 
+              (click)="submitClaim()"
+              *ngIf="claim.status === 'ReadyToFile'"
+              [disabled]="saving"
+            >
+              <i class="bi bi-send"></i> Submit to IRS
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary"></div>
+  <p class="mt-2">Loading claim...</p>
+</div>

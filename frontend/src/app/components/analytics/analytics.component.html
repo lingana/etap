@@ -1,0 +1,460 @@
+<div class="analytics-container">
+  <!-- Loading State with Skeleton -->
+  <app-skeleton-loader *ngIf="isLoading" 
+                       type="card" 
+                       [rowCount]="1">
+  </app-skeleton-loader>
+
+  <!-- Main Content -->
+  <div *ngIf="!isLoading && stats" class="analytics-content">
+    <!-- HEADER SECTION -->
+    <div class="analytics-header">
+      <div class="header-content">
+        <h1 class="header-title">
+          <mat-icon class="header-icon">bar_chart</mat-icon>
+          Detailed Reports & Analytics
+        </h1>
+        <p class="header-subtitle">Comprehensive charts, geographic analysis, and export tools</p>
+        <p class="engagement-label">
+          <span class="label-text">Current Engagement:</span>
+          <span class="label-value">{{ getEngagementLabel() }}</span>
+        </p>
+      </div>
+      <div class="action-buttons">
+        <button mat-raised-button color="primary" (click)="refresh()">
+          <mat-icon>refresh</mat-icon>
+          Refresh
+        </button>
+        <button mat-raised-button (click)="downloadReport()">
+          <mat-icon>download</mat-icon>
+          Download
+        </button>
+        <button mat-raised-button (click)="exportData()">
+          <mat-icon>table_chart</mat-icon>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 1: KEY METRICS (KPI Cards) -->
+    <div class="section">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">info</mat-icon>
+        Key Metrics
+      </h2>
+      <div class="summary-row">
+        <div class="summary-card" role="group" aria-label="Total records">
+          <div class="card-content">
+            <div class="summary-icon">
+              <mat-icon>storage</mat-icon>
+            </div>
+            <div class="summary-text">
+              <div class="summary-value">{{ stats.totalRecords | number }}</div>
+              <div class="summary-label">Total Records</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-card flagged" role="group" aria-label="Flagged records">
+          <div class="card-content">
+            <div class="summary-icon">
+              <mat-icon>warning</mat-icon>
+            </div>
+            <div class="summary-text">
+              <div class="summary-value">{{ stats.flaggedRecords | number }}</div>
+              <div class="summary-label">Flagged</div>
+              <div class="summary-rate">{{ stats.flaggingRate | number: '1.1-1' }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-card reviewed" role="group" aria-label="Reviewed records">
+          <div class="card-content">
+            <div class="summary-icon">
+              <mat-icon>done_all</mat-icon>
+            </div>
+            <div class="summary-text">
+              <div class="summary-value">{{ stats.reviewedRecords | number }}</div>
+              <div class="summary-label">Reviewed</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-card recovery" role="group" aria-label="Potential recovery">
+          <div class="card-content">
+            <div class="summary-icon">
+              <mat-icon>savings</mat-icon>
+            </div>
+            <div class="summary-text">
+              <div class="summary-value">${{ stats.potentialRecovery | number: '1.2-2' }}</div>
+              <div class="summary-label">Potential Recovery</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-Generated Insights Section -->
+    <div class="section ai-insights-section" *ngIf="aiReportInsights">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">psychology</mat-icon>
+        AI-Generated Report Insights
+      </h2>
+      
+      <div class="insights-summary">
+        <div class="insight-card executive-summary">
+          <div class="card-header">
+            <mat-icon>summarize</mat-icon>
+            <h3>Executive Summary</h3>
+          </div>
+          <div class="card-body">
+            <p>{{ aiReportInsights.executiveSummary }}</p>
+          </div>
+        </div>
+
+        <div class="insights-grid">
+          <div class="insight-card findings">
+            <div class="card-header">
+              <mat-icon>insights</mat-icon>
+              <h3>Key Findings</h3>
+            </div>
+            <div class="card-body">
+              <ul class="findings-list">
+                <li *ngFor="let finding of aiReportInsights.keyFindings">
+                  <mat-icon [class]="'priority-' + finding.priority">{{ finding.icon }}</mat-icon>
+                  <span>{{ finding.text }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="insight-card trends">
+            <div class="card-header">
+              <mat-icon>trending_up</mat-icon>
+              <h3>Trend Analysis</h3>
+            </div>
+            <div class="card-body">
+              <div class="trend-item" *ngFor="let trend of aiReportInsights.trends">
+                <div class="trend-header">
+                  <span class="trend-label">{{ trend.label }}</span>
+                  <span class="trend-value" [class]="trend.direction">{{ trend.value }}</span>
+                </div>
+                <p class="trend-description">{{ trend.description }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="insight-card recommendations">
+            <div class="card-header">
+              <mat-icon>auto_fix_high</mat-icon>
+              <h3>AI Recommendations</h3>
+            </div>
+            <div class="card-body">
+              <div class="recommendation-item" *ngFor="let rec of aiReportInsights.recommendations">
+                <div class="rec-header">
+                  <span class="rec-priority" [class]="'priority-' + rec.priority">{{ rec.priority }}</span>
+                  <span class="rec-title">{{ rec.title }}</span>
+                </div>
+                <p class="rec-description">{{ rec.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: ANALYSIS CHARTS -->
+    <div class="section">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">bar_chart</mat-icon>
+        Analysis Charts
+      </h2>
+      <div class="charts-grid">
+        <!-- Anomaly Distribution (Bar Chart) -->
+        <section class="chart-card tall" aria-label="Anomaly severity distribution">
+          <div class="card-header">
+            <mat-icon class="chart-icon">bar_chart</mat-icon>
+            <h3 class="card-title">Anomaly Severity Distribution</h3>
+          </div>
+          <div class="card-body">
+            <canvas baseChart
+              [type]="anomalyDistributionChart.type"
+              [data]="anomalyDistributionChart.data"
+              [options]="anomalyDistributionChart.options">
+            </canvas>
+          </div>
+        </section>
+
+        <!-- Claim Type Distribution (Doughnut Chart) -->
+        <section class="chart-card" aria-label="Claim type breakdown">
+          <div class="card-header">
+            <mat-icon class="chart-icon">pie_chart</mat-icon>
+            <h3 class="card-title">Claim Type Breakdown</h3>
+          </div>
+          <div class="card-body">
+            <canvas baseChart
+              [type]="claimTypeChart.type"
+              [data]="claimTypeChart.data"
+              [options]="claimTypeChart.options">
+            </canvas>
+          </div>
+        </section>
+
+        <!-- Transaction Pipeline (Line Chart) -->
+        <section class="chart-card wide" aria-label="Transaction processing pipeline">
+          <div class="card-header">
+            <mat-icon class="chart-icon">trending_up</mat-icon>
+            <h3 class="card-title">Transaction Processing Pipeline</h3>
+          </div>
+          <div class="card-body">
+            <canvas baseChart
+              [type]="flaggingRateChart.type"
+              [data]="flaggingRateChart.data"
+              [options]="flaggingRateChart.options">
+            </canvas>
+          </div>
+        </section>
+
+        <!-- Recovery Potential (Horizontal Bar Chart) -->
+        <section class="chart-card" aria-label="Recovery potential">
+          <div class="card-header">
+            <mat-icon class="chart-icon">attach_money</mat-icon>
+            <h3 class="card-title">Recovery Potential</h3>
+          </div>
+          <div class="card-body">
+            <canvas baseChart
+              [type]="recoveryChart.type"
+              [data]="recoveryChart.data"
+              [options]="recoveryChart.options">
+            </canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SECTION 3: GEOGRAPHIC ANALYSIS -->
+    <div class="section">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">public</mat-icon>
+        Geographic Analysis
+      </h2>
+      
+      <!-- US Map -->
+      <section class="map-card" aria-label="State-level flagging rate heatmap">
+        <div class="card-header">
+          <mat-icon class="chart-icon">map</mat-icon>
+          <h3 class="card-title">State-Level Flagging Rate Heatmap</h3>
+        </div>
+        <div class="card-body">
+          <div id="plotly-map" class="plotly-container"></div>
+        </div>
+      </section>
+
+      <div class="geographic-grid">
+        <!-- Top States -->
+        <section class="state-card" aria-label="Top states by flag count">
+          <div class="card-header">
+            <mat-icon class="chart-icon">trending_up</mat-icon>
+            <h3 class="card-title">Top 5 States by Flag Count</h3>
+          </div>
+          <div class="card-body">
+            <div class="state-list">
+              <div *ngFor="let state of getTopStates()" class="state-item">
+                <div class="state-rank">{{ getTopStates().indexOf(state) + 1 }}</div>
+                <div class="state-details">
+                  <div class="state-name">{{ state.name }} ({{ state.code }})</div>
+                  <div class="state-metrics">
+                    <span class="flag-count">{{ state.flaggedCount }} flagged</span>
+                    <span class="flag-rate">{{ (state.flaggingRate * 100) | number: '1.1-1' }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- High Risk States -->
+        <section class="state-card alert" aria-label="High-risk states">
+          <div class="card-header">
+            <mat-icon class="chart-icon">error</mat-icon>
+            <h3 class="card-title">High-Risk States (>50% Flagging)</h3>
+          </div>
+          <div class="card-body">
+            <div *ngIf="getHighRiskStates().length > 0; else noHighRisk" class="risk-list">
+              <div *ngFor="let state of getHighRiskStates()" class="risk-item">
+                <mat-icon class="risk-icon">warning</mat-icon>
+                <div class="risk-details">
+                  <div class="risk-state">{{ state.name }}</div>
+                  <div class="risk-rate">{{ (state.flaggingRate * 100) | number: '1.1-1' }}% flagged ({{ state.flaggedCount }}/{{ state.totalCount }})</div>
+                </div>
+              </div>
+            </div>
+            <ng-template #noHighRisk>
+              <div class="no-risk">
+                <mat-icon>check_circle</mat-icon>
+                <p>No high-risk states detected</p>
+              </div>
+            </ng-template>
+          </div>
+        </section>
+      </div>
+
+      <!-- State Table -->
+      <section class="state-table-card" aria-label="Complete state summary">
+        <div class="card-header">
+          <mat-icon class="chart-icon">table_chart</mat-icon>
+          <h3 class="card-title">Complete State Summary</h3>
+        </div>
+        <div class="card-body">
+          <div class="state-table-scroll" role="region" aria-label="Complete state summary" tabindex="0">
+            <table class="state-table">
+              <thead>
+                <tr>
+                  <th>State</th>
+                  <th>Code</th>
+                  <th>Total Records</th>
+                  <th>Flagged</th>
+                  <th>Flagging Rate</th>
+                  <th>Risk Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let state of stateData" [ngClass]="'risk-' + (state.flaggingRate > 0.5 ? 'high' : state.flaggingRate > 0.2 ? 'medium' : 'low')">
+                  <td>{{ state.name }}</td>
+                  <td class="state-code">{{ state.code }}</td>
+                  <td class="number">{{ state.totalCount | number }}</td>
+                  <td class="number flagged">{{ state.flaggedCount | number }}</td>
+                  <td class="number rate">{{ (state.flaggingRate * 100) | number: '1.1-1' }}%</td>
+                  <td>
+                    <span class="risk-badge" [ngClass]="state.flaggingRate > 0.5 ? 'high' : state.flaggingRate > 0.2 ? 'medium' : 'low'">
+                      {{ state.flaggingRate > 0.5 ? 'High' : state.flaggingRate > 0.2 ? 'Medium' : 'Low' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- SECTION 4: KEY INSIGHTS -->
+    <div class="section">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">lightbulb</mat-icon>
+        Key Insights
+      </h2>
+      <section class="insights-card" aria-label="Key insights">
+        <div class="card-body">
+          <div class="insights-grid">
+            <div class="insight">
+              <div class="insight-label">Flagging Rate</div>
+              <div class="insight-value">{{ stats.flaggingRate | number: '1.1-1' }}%</div>
+              <div class="insight-description">of total records flagged for review</div>
+            </div>
+            <div class="insight">
+              <div class="insight-label">Reviewed Progress</div>
+              <div class="insight-value">{{ stats.reviewedRecords | number }} / {{ stats.flaggedRecords | number }}</div>
+              <div class="insight-description">flagged items reviewed</div>
+            </div>
+            <div class="insight">
+              <div class="insight-label">Over Payments</div>
+              <div class="insight-value">${{ stats.estimatedOverPayments | number: '1.2-2' }}</div>
+              <div class="insight-description">potential recovery amount</div>
+            </div>
+            <div class="insight">
+              <div class="insight-label">Under Payments</div>
+              <div class="insight-value">${{ stats.estimatedUnderPayments | number: '1.2-2' }}</div>
+              <div class="insight-description">potential liability amount</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- SECTION 5: POWER BI ANALYTICS (if configured) -->
+    <div class="section" *ngIf="isPowerBIConfigured">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">dashboard</mat-icon>
+        Advanced Power BI Analytics
+      </h2>
+      <p class="section-subtitle">Access detailed dashboards and interactive reports in Power BI for deeper insights into fuel tax audit patterns and recovery opportunities.</p>
+      
+      <!-- Power BI Report Embed -->
+      <app-powerbi-embed
+        title="Detailed Audit Analytics Dashboard"
+        description="View comprehensive audit metrics, anomaly patterns, and geographic analysis"
+        type="embed"
+        [reportUrl]="'https://app.powerbi.com/groups/me/reports/audit-analytics'">
+      </app-powerbi-embed>
+
+      <!-- Power BI Dashboard Links -->
+      <div class="powerbi-links-grid">
+        <a href="https://app.powerbi.com/groups/me/dashboards" target="_blank" rel="noopener noreferrer" class="powerbi-link-card">
+          <div class="powerbi-card">
+            <div class="card-content">
+              <mat-icon>dashboard</mat-icon>
+              <h3>All Dashboards</h3>
+              <p>View all audit dashboards</p>
+              <mat-icon class="arrow">arrow_forward</mat-icon>
+            </div>
+          </div>
+        </a>
+
+        <a href="https://app.powerbi.com/groups/me/reports" target="_blank" rel="noopener noreferrer" class="powerbi-link-card">
+          <div class="powerbi-card">
+            <div class="card-content">
+              <mat-icon>assessment</mat-icon>
+              <h3>All Reports</h3>
+              <p>Access detailed analysis reports</p>
+              <mat-icon class="arrow">arrow_forward</mat-icon>
+            </div>
+          </div>
+        </a>
+
+        <a href="https://app.powerbi.com" target="_blank" rel="noopener noreferrer" class="powerbi-link-card">
+          <div class="powerbi-card">
+            <div class="card-content">
+              <mat-icon>business_analytics</mat-icon>
+              <h3>Power BI Workspace</h3>
+              <p>Full Power BI experience</p>
+              <mat-icon class="arrow">arrow_forward</mat-icon>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- SECTION 5 ALTERNATIVE: Power BI Placeholder (if not configured) -->
+    <div class="section" *ngIf="!isPowerBIConfigured">
+      <h2 class="section-title">
+        <mat-icon class="section-icon">dashboard</mat-icon>
+        Advanced Analytics with Power BI
+      </h2>
+      <section class="powerbi-placeholder-card" aria-label="Power BI placeholder">
+        <div class="card-body">
+          <div class="placeholder-content">
+            <div class="placeholder-icon">
+              <mat-icon>business_analytics</mat-icon>
+            </div>
+            <div class="placeholder-text">
+              <h3>Power BI Analytics Coming Soon</h3>
+              <p>Advanced analytics dashboards and interactive reports will be available once Power BI is configured for your workspace.</p>
+              <p class="tech-note">To enable Power BI integration, your administrator needs to configure Power BI service account credentials.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- No Data State -->
+  <app-empty-state *ngIf="!isLoading && !stats"
+                   icon="analytics"
+                   title="No Analytics Data"
+                   description="Analytics will be available once you upload and process fuel transaction data."
+                   actionLabel="Upload Data"
+                   actionIcon="upload"
+                   (actionClick)="onUploadClick()">
+  </app-empty-state>
+</div>

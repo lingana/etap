@@ -1,0 +1,24 @@
+<div class="logout-dialog">
+  <h2 mat-dialog-title>Confirm Sign Out</h2>
+  
+  <mat-dialog-content>
+    <div class="dialog-content">
+      <mat-icon class="warning-icon">warning_amber</mat-icon>
+      <div>
+        <p class="dialog-message">Are you sure you want to sign out?</p>
+        <p class="dialog-subtext">Your current selections will be saved for your next session.</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" class="cancel-btn">
+      <mat-icon>close</mat-icon>
+      <span>Cancel</span>
+    </button>
+    <button mat-raised-button color="warn" (click)="onConfirm()" class="confirm-btn">
+      <mat-icon>logout</mat-icon>
+      <span>Sign Out</span>
+    </button>
+  </mat-dialog-actions>
+</div>

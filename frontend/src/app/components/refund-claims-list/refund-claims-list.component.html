@@ -1,0 +1,452 @@
+<div class="refund-claims-container">
+  <!-- Generating Claim Overlay -->
+  <div *ngIf="generating" class="alert alert-info mb-4">
+    <div class="d-flex align-items-center">
+      <div class="spinner-border spinner-border-sm me-3" role="status">
+        <span class="visually-hidden">Generating...</span>
+      </div>
+      <div>
+        <strong>Generating Refund Claim...</strong>
+        <p class="mb-0">Processing selected transactions</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engagement/Client Info Header -->
+  <div class="engagement-label" style="margin-top: 4px; margin-bottom: 8px; font-size: 15px; color: #2563eb; display: flex; align-items: center; gap: 8px;">
+    <mat-icon style="font-size: 20px;">groups</mat-icon>
+    <span><strong>Current Engagement:</strong></span>
+    <span style="font-weight: 500;">{{ getEngagementLabel() }}</span>
+  </div>
+
+  <!-- Header with Stats -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Total Claimed</h6>
+        <h3 class="text-primary">${{ totalClaimedAmount | number:'1.2-2' }}</h3>
+        <small>{{ claims.length }} claims</small>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Approved</h6>
+        <h3 class="text-success">${{ totalApprovedAmount | number:'1.2-2' }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Paid</h6>
+        <h3 class="text-info">${{ totalPaidAmount | number:'1.2-2' }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Recovery Rate</h6>
+        <h3 class="text-warning">{{ totalClaimedAmount > 0 ? (totalPaidAmount / totalClaimedAmount * 100 | number:'1.0-0') : '0' }}%</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading refund claims...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="alert alert-danger" role="alert">
+    <mat-icon style="vertical-align: middle; margin-right: 8px;">error</mat-icon>
+    {{ error }}
+    <button class="btn btn-sm btn-outline-danger ms-3" (click)="dataGrid?.instance?.refresh()">Retry</button>
+  </div>
+
+  <!-- Claims Grid -->
+  <div *ngIf="!loading && !error" class="grid-container">
+    <dx-data-grid
+      #claimsGrid
+      [dataSource]="claimsStore"
+      [showBorders]="true"
+      [showRowLines]="true"
+      [showColumnLines]="true"
+      [rowAlternationEnabled]="true"
+      [allowColumnReordering]="true"
+      [allowColumnResizing]="true"
+      [columnAutoWidth]="true"
+      [hoverStateEnabled]="true"
+      [remoteOperations]="false"
+      (onToolbarPreparing)="onToolbarPreparing($event)"
+      (onInitNewRow)="onInitNewRow($event)"
+      (onEditingStart)="onEditingStart($event)"
+      keyExpr="id"
+      height="calc(100vh - 420px)">
+
+      <!-- State Storing -->
+      <dxo-state-storing
+        [enabled]="true"
+        type="localStorage"
+        storageKey="refundClaimsGrid">
+      </dxo-state-storing>
+
+      <!-- Editing - Popup Mode -->
+      <dxo-editing
+        mode="popup"
+        [allowAdding]="true"
+        [allowUpdating]="true"
+        [allowDeleting]="true"
+        [useIcons]="true"
+        [texts]="{ confirmDeleteMessage: 'Are you sure you want to delete this draft claim? This action cannot be undone.' }">
+        <dxo-popup
+          title="Refund Claim"
+          [showTitle]="true"
+          [width]="780"
+          [height]="580"
+          container="body">
+        </dxo-popup>
+        <dxo-form [colCount]="2">
+          <dxi-item itemType="group" caption="Claimant Information" [colCount]="2" [colSpan]="2">
+            <dxi-item dataField="ein"></dxi-item>
+            <dxi-item dataField="nameOfClaimant"></dxi-item>
+            <dxi-item dataField="claimantAddress" [colSpan]="2" editorType="dxTextArea" [editorOptions]="{ height: 60 }"></dxi-item>
+          </dxi-item>
+          <dxi-item itemType="group" caption="Contact Information" [colCount]="3" [colSpan]="2">
+            <dxi-item dataField="contactName"></dxi-item>
+            <dxi-item dataField="contactPhone"></dxi-item>
+            <dxi-item dataField="contactEmail"></dxi-item>
+          </dxi-item>
+          <dxi-item itemType="group" caption="Claim Details" [colCount]="2" [colSpan]="2">
+            <dxi-item dataField="taxType"></dxi-item>
+            <dxi-item dataField="refundType"></dxi-item>
+            <dxi-item dataField="claimedAmount"></dxi-item>
+            <dxi-item dataField="priority"></dxi-item>
+            <dxi-item dataField="taxYear"></dxi-item>
+            <dxi-item dataField="taxQuarter"></dxi-item>
+          </dxi-item>
+          <dxi-item itemType="group" caption="Notes" [colCount]="1" [colSpan]="2">
+            <dxi-item dataField="internalNotes" editorType="dxTextArea" [editorOptions]="{ height: 60 }"></dxi-item>
+          </dxi-item>
+        </dxo-form>
+      </dxo-editing>
+
+      <!-- Selection -->
+      <dxo-selection mode="single"></dxo-selection>
+
+      <!-- Filter Row -->
+      <dxo-filter-row [visible]="true"></dxo-filter-row>
+
+      <!-- Header Filter -->
+      <dxo-header-filter [visible]="true">
+        <dxo-search [enabled]="true"></dxo-search>
+      </dxo-header-filter>
+
+      <!-- Search Panel -->
+      <dxo-search-panel 
+        [visible]="true" 
+        [width]="240" 
+        placeholder="Search claims...">
+      </dxo-search-panel>
+
+      <!-- Column Chooser -->
+      <dxo-column-chooser [enabled]="true" mode="select"></dxo-column-chooser>
+
+      <!-- Export -->
+      <dxo-export [enabled]="true" [allowExportSelectedData]="false"></dxo-export>
+
+      <!-- Paging -->
+      <dxo-paging [pageSize]="25"></dxo-paging>
+      <dxo-pager 
+        [showPageSizeSelector]="true" 
+        [allowedPageSizes]="[10, 25, 50, 100]" 
+        [showInfo]="true">
+      </dxo-pager>
+
+      <!-- Sorting -->
+      <dxo-sorting mode="multiple"></dxo-sorting>
+
+      <!-- Columns -->
+      <dxi-column
+        dataField="claimNumber"
+        caption="Claim #"
+        [width]="160"
+        [fixed]="true"
+        [allowEditing]="false"
+        cellTemplate="claimNumberCell">
+      </dxi-column>
+
+      <dxi-column
+        dataField="ein"
+        caption="EIN"
+        [width]="140"
+        [visible]="false">
+        <dxi-validation-rule type="required" message="EIN is required"></dxi-validation-rule>
+      </dxi-column>
+
+      <dxi-column
+        dataField="nameOfClaimant"
+        caption="Client"
+        [width]="200"
+        cellTemplate="clientCell">
+        <dxi-validation-rule type="required" message="Claimant name is required"></dxi-validation-rule>
+      </dxi-column>
+
+      <dxi-column
+        dataField="claimantAddress"
+        caption="Address"
+        [width]="200"
+        [visible]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="contactName"
+        caption="Contact"
+        [width]="150"
+        [visible]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="contactPhone"
+        caption="Phone"
+        [width]="130"
+        [visible]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="contactEmail"
+        caption="Email"
+        [width]="180"
+        [visible]="false">
+        <dxi-validation-rule type="email" message="Invalid email address"></dxi-validation-rule>
+      </dxi-column>
+
+      <dxi-column
+        dataField="taxType"
+        caption="Tax Type"
+        [width]="150">
+        <dxo-lookup
+          [dataSource]="taxTypes"
+          valueExpr="value"
+          displayExpr="text">
+        </dxo-lookup>
+      </dxi-column>
+
+      <dxi-column
+        dataField="refundType"
+        caption="Refund Type"
+        [width]="140"
+        [visible]="false">
+        <dxo-lookup
+          [dataSource]="refundTypes"
+          valueExpr="value"
+          displayExpr="text">
+        </dxo-lookup>
+      </dxi-column>
+
+      <dxi-column
+        dataField="status"
+        caption="Status"
+        [width]="140"
+        [allowEditing]="false"
+        cellTemplate="statusCell">
+        <dxo-header-filter [dataSource]="statusFilterData"></dxo-header-filter>
+      </dxi-column>
+
+      <dxi-column
+        dataField="priority"
+        caption="Priority"
+        [width]="120"
+        cellTemplate="priorityCell">
+        <dxo-lookup
+          [dataSource]="priorityOptions"
+          valueExpr="value"
+          displayExpr="text">
+        </dxo-lookup>
+      </dxi-column>
+
+      <dxi-column
+        dataField="claimedAmount"
+        caption="Claimed Amount"
+        dataType="number"
+        format="currency"
+        [width]="150"
+        cellTemplate="claimedAmountCell">
+        <dxi-validation-rule type="range" [min]="0" message="Amount must be positive"></dxi-validation-rule>
+      </dxi-column>
+
+      <dxi-column
+        dataField="approvedAmount"
+        caption="Approved"
+        dataType="number"
+        format="currency"
+        [width]="130"
+        [allowEditing]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="paidAmount"
+        caption="Paid"
+        dataType="number"
+        format="currency"
+        [width]="130"
+        [allowEditing]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="submittedDate"
+        caption="Filed Date"
+        dataType="date"
+        format="MM/dd/yyyy"
+        [width]="120"
+        [allowEditing]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="taxYear"
+        caption="Tax Year"
+        dataType="number"
+        [width]="100">
+        <dxi-validation-rule type="range" [min]="2020" [max]="2030" message="Enter a valid tax year"></dxi-validation-rule>
+      </dxi-column>
+
+      <dxi-column
+        dataField="taxQuarter"
+        caption="Tax Quarter"
+        [width]="120">
+        <dxo-lookup
+          [dataSource]="quarterOptions"
+          valueExpr="value"
+          displayExpr="text">
+        </dxo-lookup>
+      </dxi-column>
+
+      <dxi-column
+        dataField="transactionCount"
+        caption="Txn Count"
+        dataType="number"
+        [width]="110"
+        [allowEditing]="false">
+      </dxi-column>
+
+      <dxi-column
+        dataField="internalNotes"
+        caption="Notes"
+        [width]="200"
+        [visible]="false">
+      </dxi-column>
+
+      <dxi-column
+        type="buttons"
+        caption="Actions"
+        [width]="160"
+        [fixed]="true"
+        fixedPosition="right">
+        <dxi-button name="edit" hint="Edit Claim"></dxi-button>
+        <dxi-button name="delete" hint="Delete Draft" [visible]="isDeleteVisible"></dxi-button>
+        <dxi-button
+          icon="exportpdf"
+          hint="Generate Form 8849"
+          [onClick]="onGenerateFormClick"
+          [visible]="isGenerateFormVisible">
+        </dxi-button>
+        <dxi-button
+          icon="search"
+          hint="View Details"
+          [onClick]="onViewClick">
+        </dxi-button>
+      </dxi-column>
+
+      <!-- Summary -->
+      <dxo-summary>
+        <dxi-total-item
+          column="claimNumber"
+          summaryType="count"
+          displayFormat="Total: {0} claims">
+        </dxi-total-item>
+        <dxi-total-item
+          column="claimedAmount"
+          summaryType="sum"
+          valueFormat="currency"
+          displayFormat="Total Claimed: {0}">
+        </dxi-total-item>
+        <dxi-total-item
+          column="approvedAmount"
+          summaryType="sum"
+          valueFormat="currency"
+          displayFormat="Total Approved: {0}">
+        </dxi-total-item>
+        <dxi-total-item
+          column="paidAmount"
+          summaryType="sum"
+          valueFormat="currency"
+          displayFormat="Total Paid: {0}">
+        </dxi-total-item>
+      </dxo-summary>
+
+      <!-- Cell Templates -->
+      <div *dxTemplate="let data of 'claimNumberCell'">
+        <div class="claim-number-cell">
+          <strong>{{ data.value }}</strong>
+          <div class="cell-subtitle">{{ data.data.taxYear }} {{ data.data.taxQuarter }}</div>
+        </div>
+      </div>
+
+      <div *dxTemplate="let data of 'clientCell'">
+        <div class="client-cell">
+          <div>{{ data.value || 'N/A' }}</div>
+          <div class="cell-subtitle">{{ data.data.ein || 'No EIN' }}</div>
+        </div>
+      </div>
+
+      <div *dxTemplate="let data of 'statusCell'">
+        <span [class]="'badge ' + getStatusBadgeClass(data.value)">
+          {{ getStatusDisplayName(data.value) }}
+        </span>
+      </div>
+
+      <div *dxTemplate="let data of 'priorityCell'">
+        <span [class]="getPriorityClass(data.value)">
+          <mat-icon class="priority-icon">flag</mat-icon>
+          {{ getPriorityLabel(data.value) }}
+        </span>
+      </div>
+
+      <div *dxTemplate="let data of 'claimedAmountCell'">
+        <div class="amount-cell">
+          <strong>{{ data.value | currency }}</strong>
+          <div class="cell-subtitle">{{ data.data.transactionCount }} txns</div>
+        </div>
+      </div>
+
+    </dx-data-grid>
+
+    <!-- Empty State -->
+    <div *ngIf="claims.length === 0 && !loading" class="empty-state">
+      <mat-icon class="empty-state-icon">inbox</mat-icon>
+      <p class="empty-state-title">No refund claims found</p>
+      <p class="empty-state-subtitle" *ngIf="!generating">Select flagged transactions and generate a claim to get started</p>
+    </div>
+  </div>
+
+  <!-- Claim Detail Slide-in Panel -->
+  <div *ngIf="showClaimDetail && selectedClaim" class="claim-detail-overlay" (click)="closeClaimDetail()">
+    <div class="claim-detail-panel" (click)="$event.stopPropagation()">
+      <div class="panel-header">
+        <h4>
+          <mat-icon>description</mat-icon>
+          Claim {{ selectedClaim.claimNumber }}
+          <span [class]="'badge ' + getStatusBadgeClass(selectedClaim.status)" style="margin-left: 12px;">
+            {{ getStatusDisplayName(selectedClaim.status) }}
+          </span>
+        </h4>
+        <button class="btn btn-sm btn-outline-secondary" (click)="closeClaimDetail()">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+          Close
+        </button>
+      </div>
+      <div class="panel-content">
+        <app-claim-filing-form [claimId]="selectedClaim.id" (onClose)="closeClaimDetail()"></app-claim-filing-form>
+      </div>
+    </div>
+  </div>
+</div>

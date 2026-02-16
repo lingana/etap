@@ -1,0 +1,335 @@
+/* AI Feedback Row */
+.ai-feedback-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ai-feedback-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+/* AI Draft Button for Notes */
+.notes-group .notes-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ai-draft-btn {
+  height: 40px;
+  min-width: 90px;
+  font-size: 13px;
+  margin-top: 0;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.help-icon {
+  vertical-align: middle;
+  margin-left: 4px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+}
+
+.help-icon mat-icon {
+  font-size: 20px;
+}
+/* Ensure the detail panel and its content are always scrollable */
+
+.detail-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--bg-primary);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  outline: none;
+}
+
+form {
+  margin-top: 15px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gray-200);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .detail-container {
+    max-width: 98vw;
+    padding: 10px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .detail-header h2 {
+    font-size: 1.1rem;
+  }
+  .section {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .review-form {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .detail-container {
+    max-width: 100vw;
+    padding: 2vw 2vw 2vw 2vw;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 15px;
+  }
+  .detail-header h2 {
+    font-size: 1rem;
+  }
+  .section h3 {
+    font-size: 12px;
+  }
+  .form-label, .select-control, .input-control, .textarea-control {
+    font-size: 13px;
+  }
+  .submit-btn {
+    font-size: 13px;
+    padding: 10px 8px;
+  }
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.section {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  padding-left: 16px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--gray-200);
+  border-left: 4px solid var(--primary);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-radius: 4px 0 0 4px;
+}
+
+.section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section h3 {
+  margin: 0 0 16px -16px;
+  padding: 0 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.field label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 120px;
+}
+
+.field span {
+  color: var(--text-primary);
+  text-align: right;
+  flex: 1;
+}
+
+.reason-text {
+  margin: 8px 0;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-left: 4px solid var(--warning);
+  color: var(--warning-dark);
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.reason-text:hover {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  box-shadow: none;
+}
+
+.explanation-text {
+  background: linear-gradient(135deg, #f0f4f8 0%, #f8fafc 100%);
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--primary);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.explanation-text:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%);
+  border-color: var(--border-medium);
+  box-shadow: none;
+}
+
+.text-red {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.text-green {
+  color: var(--success-dark);
+  font-weight: 600;
+}
+
+/* Audit Review Section */
+.audit-section {
+  background-color: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 6px;
+  margin: 0;
+  border: 1px solid var(--border-light);
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.select-control,
+.textarea-control,
+.input-control {
+  padding: 10px 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.select-control:hover,
+.textarea-control:hover,
+.input-control:hover {
+  border-color: var(--text-tertiary);
+  background-color: var(--bg-secondary);
+}
+
+.select-control:focus,
+.textarea-control:focus,
+.input-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: none;
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  background-color: var(--bg-primary);
+}
+
+.select-control:disabled,
+.textarea-control:disabled,
+.input-control:disabled {
+  background-color: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  border-color: var(--border-light);
+}
+
+.textarea-control {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.submit-btn {
+  padding: 12px 16px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+  box-shadow: none;
+}
+
+.submit-btn:active:not(:disabled) {
+  background-color: var(--primary-dark);
+  transform: translateY(1px);
+}
+
+.submit-btn:disabled {
+  background-color: var(--border-medium);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}

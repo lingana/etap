@@ -1,0 +1,200 @@
+<div class="upload-container">
+  <section class="upload-card" aria-label="Upload fuel transaction data">
+    <div class="upload-card-header">
+      <mat-icon class="card-header-icon">upload_file</mat-icon>
+      <div class="header-content">
+        <h2 class="upload-card-title">Data Integration</h2>
+        <p class="upload-card-subtitle">Import transaction data for analysis via file upload or demo data generation</p>
+        <p class="integration-note">
+          <mat-icon class="info-icon">info</mat-icon>
+          <span>Production: Integrates with ERP systems (SAP, Oracle, Orion) • Demo: Manual file upload or generated data</span>
+        </p>
+        <p class="engagement-label">
+          <span class="label-text">Current Engagement:</span>
+          <span class="label-value">{{ getEngagementLabel() }}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="upload-card-content">
+      <div class="upload-area">
+        <input #fileInput type="file" accept=".xlsx,.xls,.csv" (change)="onFileSelected($event)" style="display: none;" />
+        <button mat-stroked-button (click)="fileInput.click()" [disabled]="isUploading || isGeneratingDemo" class="choose-file-btn">
+          <mat-icon>folder_open</mat-icon>
+          <span>Choose File</span>
+        </button>
+        <span class="divider-text">or</span>
+        <button mat-stroked-button (click)="generateDemoData(500)" [disabled]="isUploading || isGeneratingDemo" class="demo-btn">
+          <mat-icon>science</mat-icon>
+          <span>Generate Demo Data</span>
+        </button>
+        <p *ngIf="selectedFile" class="file-name">
+          <mat-icon>check_circle</mat-icon>
+          {{ selectedFile.name }}
+        </p>
+        <p *ngIf="isGeneratingDemo" class="generating-message">
+          <mat-icon class="spinner">sync</mat-icon>
+          Generating demo data...
+        </p>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message">
+        <mat-icon>error</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <div *ngIf="showPreview && previewData.length > 0" class="preview-section">
+        <h3><mat-icon>preview</mat-icon> Preview (First 10 Records)</h3>
+        <div class="preview-summary">
+          <div class="summary-item">
+            <mat-icon>receipt_long</mat-icon>
+            <span><strong>{{ previewData.length }}</strong> records shown</span>
+          </div>
+          <div class="summary-item">
+            <mat-icon>calendar_today</mat-icon>
+            <span>{{ getDateRange() }}</span>
+          </div>
+          <div class="summary-item">
+            <mat-icon>attach_money</mat-icon>
+            <span><strong>${{ getTotalCost() | number:'1.2-2' }}</strong> total cost</span>
+          </div>
+        </div>
+
+        <!-- AI Validation Insights -->
+        <div class="ai-validation-section" *ngIf="aiValidation">
+          <div class="validation-header">
+            <mat-icon>psychology</mat-icon>
+            <h4>AI Pre-Upload Analysis</h4>
+          </div>
+          <div class="validation-grid">
+            <div class="validation-card quality">
+              <div class="card-icon">
+                <mat-icon>verified</mat-icon>
+              </div>
+              <div class="card-content">
+                <div class="score" [class.good]="aiValidation.qualityScore >= 80" [class.warning]="aiValidation.qualityScore < 80 && aiValidation.qualityScore >= 60" [class.poor]="aiValidation.qualityScore < 60">{{ aiValidation.qualityScore }}%</div>
+                <div class="label">Data Quality Score</div>
+              </div>
+            </div>
+            <div class="validation-card anomalies">
+              <div class="card-icon">
+                <mat-icon>warning</mat-icon>
+              </div>
+              <div class="card-content">
+                <div class="score">{{ aiValidation.predictedAnomalies }}</div>
+                <div class="label">Predicted Anomalies</div>
+                <div class="sublabel">~{{ aiValidation.anomalyPercentage }}% of dataset</div>
+              </div>
+            </div>
+            <div class="validation-card confidence">
+              <div class="card-icon">
+                <mat-icon>analytics</mat-icon>
+              </div>
+              <div class="card-content">
+                <div class="score">{{ aiValidation.confidence }}%</div>
+                <div class="label">AI Confidence</div>
+              </div>
+            </div>
+          </div>
+          <div class="validation-insights" *ngIf="aiValidation.insights && aiValidation.insights.length > 0">
+            <div class="insight-item" *ngFor="let insight of aiValidation.insights">
+              <mat-icon [class]="'severity-' + insight.severity">{{ insight.icon }}</mat-icon>
+              <span>{{ insight.message }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Date</th>
+                <th>Merchant</th>
+                <th>State</th>
+                <th>Fuel Type</th>
+                <th>Quantity (Gal)</th>
+                <th>Price/Unit</th>
+                <th>Net Cost</th>
+                <th>Tax Paid</th>
+                <th>Asset</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of previewData">
+                <td class="record-id">{{ item.recordID }}</td>
+                <td>{{ item.transactionDate | date:'MM/dd/yyyy' }}</td>
+                <td class="merchant-name">{{ item.merchantName }}</td>
+                <td class="state-badge">{{ item.merchantState }}</td>
+                <td class="fuel-type">{{ item.fuelType }}</td>
+                <td class="numeric">{{ item.quantity | number:'1.1-1' }}</td>
+                <td class="numeric">${{ item.pricePerUnit | number:'1.3-4' }}</td>
+                <td class="numeric strong">${{ item.netCost | number:'1.2-2' }}</td>
+                <td class="numeric tax">{{ item.totalTaxAmount > 0 ? ('$' + (item.totalTaxAmount | number:'1.2-2')) : '-' }}</td>
+                <td class="asset">{{ item.assetNumber || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="preview-note">
+          <mat-icon>info</mat-icon>
+          Showing preview of first 10 transactions. Full dataset will be processed upon upload.
+        </p>
+      </div>
+
+      <div *ngIf="isUploading" class="progress-section">
+        <mat-icon class="spinner-icon">hourglass_top</mat-icon>
+        <p>Uploading and processing file...</p>
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      </div>
+
+      <div *ngIf="uploadStatus" class="status-section" [ngClass]="uploadStatus.status">
+        <div class="status-header">
+          <mat-icon *ngIf="uploadStatus.status === 'Completed'" class="status-icon success">check_circle</mat-icon>
+          <mat-icon *ngIf="uploadStatus.status === 'Failed'" class="status-icon error">cancel</mat-icon>
+          <mat-icon *ngIf="uploadStatus.status === 'Processing'" class="status-icon processing">history</mat-icon>
+          <h3>{{ uploadStatus.status }}</h3>
+        </div>
+        <div class="status-details">
+          <div class="detail-row">
+            <mat-icon>description</mat-icon>
+            <span><strong>File:</strong> {{ uploadStatus.fileName }}</span>
+          </div>
+          <div class="detail-row">
+            <mat-icon>storage</mat-icon>
+            <span><strong>Total Records:</strong> {{ uploadStatus.totalRecords }}</span>
+          </div>
+          <div class="detail-row">
+            <mat-icon>done_all</mat-icon>
+            <span><strong>Processed:</strong> {{ uploadStatus.processedRecords }}</span>
+          </div>
+          <div class="detail-row">
+            <mat-icon>warning</mat-icon>
+            <span><strong>Flagged:</strong> {{ uploadStatus.flaggedRecords }}</span>
+          </div>
+          <div *ngIf="uploadStatus.errorMessage" class="detail-row error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ uploadStatus.errorMessage }}</span>
+          </div>
+        </div>
+        <div class="status-actions" *ngIf="uploadStatus.status === 'Completed' && uploadStatus.flaggedRecords > 0">
+          <button mat-raised-button color="primary" (click)="navigateToFlagged()">
+            <mat-icon>fact_check</mat-icon>
+            Review {{ uploadStatus.flaggedRecords }} Flagged Items
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="upload-card-actions">
+      <button mat-raised-button color="primary" (click)="uploadFile()" [disabled]="!selectedFile || isUploading">
+        <mat-icon>cloud_upload</mat-icon>
+        Upload & Analyze
+      </button>
+      <button mat-button (click)="resetForm()">
+        <mat-icon>refresh</mat-icon>
+        Reset
+      </button>
+    </div>
+  </section>
+</div>

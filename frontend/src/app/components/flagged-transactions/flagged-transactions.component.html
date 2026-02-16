@@ -1,0 +1,318 @@
+<div class="transactions-container">
+  <section class="transactions-panel" aria-label="Flagged transactions">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-icon-wrapper">
+          <mat-icon class="header-icon">warning</mat-icon>
+        </div>
+        <div class="header-text">
+          <h2 class="page-title">Flagged Transactions</h2>
+          <p class="page-subtitle">Transactions flagged for anomalies and potential refund claims</p>
+          <div class="engagement-info">
+            <span class="engagement-label">{{ getEngagementLabel() }}</span>
+            <span class="record-count">{{ flaggedTransactions.length }} flagged of {{ totalRecords }} total</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-right" *ngIf="selectedTransaction">
+        <button mat-stroked-button (click)="closeDetails()">
+          <mat-icon>close</mat-icon>
+          Close Details
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar: Filters and Actions -->
+    <div class="toolbar" *ngIf="!selectedTransaction">
+      <div class="toolbar-left">
+        <div class="filter-group">
+          <label class="filter-label">Filter by Risk</label>
+          <select [(ngModel)]="selectedRiskLevel" (change)="applyFilters()" class="filter-select">
+            <option value="all">All Levels</option>
+            <option value="high">High Risk</option>
+            <option value="medium">Medium Risk</option>
+            <option value="low">Low Risk</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Sort by</label>
+          <select [(ngModel)]="sortBy" (change)="applySorting()" class="filter-select">
+            <option value="anomalyScore">Anomaly Score</option>
+            <option value="amount">Amount</option>
+            <option value="date">Date</option>
+            <option value="merchant">Merchant</option>
+          </select>
+        </div>
+
+        <button mat-icon-button [matMenuTriggerFor]="viewMenu" class="icon-btn" title="View options">
+          <mat-icon>view_list</mat-icon>
+        </button>
+        <mat-menu #viewMenu="matMenu">
+          <button mat-menu-item (click)="toggleViewMode('table')">
+            <mat-icon>table_chart</mat-icon>
+            <span>Table View</span>
+          </button>
+          <button mat-menu-item (click)="toggleViewMode('cards')">
+            <mat-icon>view_module</mat-icon>
+            <span>Card View</span>
+          </button>
+        </mat-menu>
+      </div>
+
+      <div class="toolbar-right">
+        <button 
+          mat-raised-button 
+          color="warn" 
+          (click)="generateRefundClaim()" 
+          [disabled]="selectedTransactionIds.size === 0"
+          title="Generate refund claim from selected transactions">
+          <mat-icon>request_quote</mat-icon>
+          Generate Refund Claim ({{ selectedTransactionIds.size }})
+        </button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="runAutoReviewAll()" 
+          [disabled]="isBulkReviewing || isLoading"
+          title="AI Agent will review all unreviewed flagged transactions">
+          <mat-icon>auto_awesome</mat-icon>
+          Auto-Review All
+        </button>
+        <button 
+          mat-raised-button 
+          color="accent" 
+          (click)="runBulkAgenticReview()" 
+          [disabled]="selectedTransactionIds.size === 0 || isBulkReviewing"
+          title="AI Agent will review selected transactions">
+          <mat-icon>psychology</mat-icon>
+          Review Selected ({{ selectedTransactionIds.size }})
+        </button>
+        <button 
+          mat-stroked-button 
+          (click)="exportToCSV()"
+          [disabled]="flaggedTransactions.length === 0"
+          title="Export all flagged transactions to CSV">
+          <mat-icon>download</mat-icon>
+          Export CSV
+        </button>
+      </div>
+
+      <div class="processing-indicator" *ngIf="isBulkReviewing">
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Processing...</span>
+      </div>
+    </div>
+
+    <div class="transactions-panel-content">
+      <!-- Suggested for Review Section -->
+      <div *ngIf="getSuggestedForReview().length > 0 && !selectedTransaction" class="suggested-review-section">
+        <h3 class="suggested-title">
+          <mat-icon class="suggested-icon">priority_high</mat-icon>
+          Suggested for Review
+        </h3>
+        <div class="suggested-list">
+          <div *ngFor="let tx of getSuggestedForReview()" class="suggested-item">
+            <span class="suggested-score" [ngClass]="getScoreColor(tx.anomalyScore)">
+              {{ tx.anomalyScore | number: '1.2-2' }}
+            </span>
+            <span class="suggested-id">#{{ tx.recordID }}</span>
+            <span class="suggested-merchant">{{ tx.merchantName }}</span>
+            <span class="suggested-date">{{ tx.transactionDate | date: 'MM/dd/yy' }}</span>
+            <button mat-stroked-button color="primary" (click)="viewDetails(tx)">Review Now</button>
+          </div>
+        </div>
+      </div>
+      <!-- Summary Bar -->
+      <div class="summary-bar" *ngIf="!isLoading && flaggedTransactions.length > 0">
+        <div class="summary-item">
+          <mat-icon>warning</mat-icon>
+          <span><strong>{{ flaggedTransactions.length }}</strong> Flagged</span>
+        </div>
+        <div class="summary-item">
+          <mat-icon>attach_money</mat-icon>
+          <span><strong>${{ getTotalAmount() | number:'1.2-2' }}</strong> Total Amount</span>
+        </div>
+        <div class="summary-item recovery">
+          <mat-icon>trending_up</mat-icon>
+          <span><strong>${{ getPotentialRecovery() | number:'1.2-2' }}</strong> Potential Recovery</span>
+        </div>
+        <div class="summary-item">
+          <mat-icon>check_circle</mat-icon>
+          <span><strong>{{ getApprovedCount() }}</strong> Approved</span>
+        </div>
+      </div>
+
+      <!-- Loading State with Skeleton -->
+      <app-skeleton-loader *ngIf="isLoading" 
+                           type="table" 
+                           [rowCount]="5" 
+                           [columnCount]="9">
+      </app-skeleton-loader>
+
+      <!-- Empty State -->
+      <app-empty-state *ngIf="!isLoading && flaggedTransactions.length === 0"
+                       icon="fact_check"
+                       title="No Flagged Transactions"
+                       description="All transactions appear normal. No anomalies detected at this time."
+                       actionLabel="Upload Data"
+                       actionIcon="upload"
+                       (actionClick)="onUploadClick()">
+      </app-empty-state>
+
+      <div *ngIf="!isLoading && flaggedTransactions.length > 0" class="table-wrapper">
+        <!-- Card View -->
+        <div *ngIf="viewMode === 'cards'" class="cards-view">
+          <div class="cards-grid">
+            <mat-card *ngFor="let transaction of paginatedTransactions; trackBy: trackByTransactionId"
+                      class="transaction-card"
+                      [class.selected]="isSelected(transaction)"
+                      (click)="selectTransaction(transaction)">
+              <mat-card-header>
+                <div class="card-header-content">
+                  <div class="merchant-info">
+                    <mat-icon class="merchant-icon">store</mat-icon>
+                    <div class="merchant-details">
+                      <h3 class="merchant-name">{{ transaction.merchantName }}</h3>
+                      <p class="merchant-location">{{ transaction.merchantState }}</p>
+                    </div>
+                  </div>
+                  <div class="risk-indicator" [class]="'risk-' + getRiskLevel(transaction.anomalyScore)">
+                    <mat-icon>{{ getRiskIcon(transaction.anomalyScore) }}</mat-icon>
+                    <span class="risk-label">{{ getRiskLabel(transaction.anomalyScore) }}</span>
+                  </div>
+                </div>
+              </mat-card-header>
+
+              <mat-card-content>
+                <div class="transaction-details">
+                  <div class="detail-row">
+                    <span class="label">Amount:</span>
+                    <span class="value">${{ transaction.netCost | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Fuel:</span>
+                    <span class="value">{{ transaction.fuelType }} ({{ transaction.quantity }} gal)</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Date:</span>
+                    <span class="value">{{ transaction.transactionDate | date:'short' }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Anomaly Score:</span>
+                    <span class="value anomaly-score">{{ transaction.anomalyScore | percent:'1.1-1' }}</span>
+                  </div>
+                </div>
+
+                <div class="card-actions">
+                  <button mat-stroked-button size="small" (click)="viewDetails(transaction); $event.stopPropagation()">
+                    <mat-icon>visibility</mat-icon>
+                    Details
+                  </button>
+                  <button mat-stroked-button size="small" color="primary" (click)="runAgenticReview(transaction); $event.stopPropagation()">
+                    <mat-icon>psychology</mat-icon>
+                    AI Review
+                  </button>
+                </div>
+              </mat-card-content>
+
+              <mat-card-actions *ngIf="transaction.explanation">
+                <div class="ai-insight">
+                  <mat-icon class="ai-icon">smart_toy</mat-icon>
+                  <p class="ai-summary">{{ getAISummary(transaction.explanation) }}</p>
+                </div>
+              </mat-card-actions>
+            </mat-card>
+          </div>
+        </div>
+
+        <!-- Table View (existing) -->
+        <table class="transactions-table">
+          <thead>
+            <tr>
+              <th class="checkbox-column">
+                <mat-checkbox 
+                  (change)="toggleSelectAll()"
+                  [checked]="isAllSelected()"
+                  [indeterminate]="isSomeSelected()"
+                  [disabled]="isBulkReviewing">
+                </mat-checkbox>
+              </th>
+              <th>Record ID</th>
+              <th>Date</th>
+              <th>Merchant</th>
+              <th>State</th>
+              <th>Fuel Type</th>
+              <th>Quantity</th>
+              <th>Amount</th>
+              <th>Tax Paid</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Potential Recovery</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let element of displayedTransactions" 
+                [class.selected-row]="isSelected(element)">
+              <td class="checkbox-column">
+                <mat-checkbox 
+                  (change)="toggleSelection(element)"
+                  [checked]="isSelected(element)"
+                  [disabled]="isBulkReviewing"
+                  (click)="$event.stopPropagation()">
+                </mat-checkbox>
+              </td>
+              <td class="record-id">{{ element.recordID }}</td>
+              <td>{{ element.transactionDate | date: 'MM/dd/yy' }}</td>
+              <td class="merchant">{{ element.merchantName }}</td>
+              <td class="state-badge">{{ element.merchantState }}</td>
+              <td class="fuel-type">{{ element.fuelType }}</td>
+              <td class="numeric">{{ element.quantity | number: '1.1-1' }} gal</td>
+              <td class="numeric amount">${{ element.netCost | number: '1.2-2' }}</td>
+              <td class="numeric tax">{{ element.totalTaxAmount > 0 ? ('$' + (element.totalTaxAmount | number:'1.2-2')) : '-' }}</td>
+              <td>
+                <span [ngClass]="getScoreColor(element.anomalyScore)">
+                  {{ element.anomalyScore | number: '1.2-2' }}
+                </span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(element.status || 'FLAGGED')">
+                  {{ element.status || 'FLAGGED' }}
+                </span>
+              </td>
+              <td class="numeric recovery">
+                <span class="recovery-amount" *ngIf="element.claimAmount">
+                  ${{ element.claimAmount | number: '1.2-2' }}
+                </span>
+                <span class="text-muted" *ngIf="!element.claimAmount">-</span>
+              </td>
+              <td>
+                <button mat-icon-button 
+                  (click)="runAgenticReview(element)" 
+                  [disabled]="isReviewing(element)"
+                  [class.reviewing]="isReviewing(element)"
+                  title="{{ isReviewing(element) ? 'AI Agent is reviewing...' : 'AI Agent Review' }}"
+                  class="agent-button">
+                  <mat-spinner *ngIf="isReviewing(element)" diameter="24" class="button-spinner"></mat-spinner>
+                  <mat-icon *ngIf="!isReviewing(element)">smart_toy</mat-icon>
+                </button>
+                <button mat-icon-button (click)="viewDetails(element)" title="View Details">
+                  <mat-icon>open_in_new</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="selectedTransaction" class="detail-panel">
+    <app-transaction-detail 
+      [transaction]="selectedTransaction"
+      (close)="closeDetails()">
+    </app-transaction-detail>
+  </div>
+</div>

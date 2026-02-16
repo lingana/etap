@@ -1,0 +1,494 @@
+<div class="dashboard-container">
+  <!-- Welcome Section -->
+  <section class="welcome-section">
+    <div class="welcome-content">
+      <div class="welcome-text">
+        <h1>Welcome, {{ getCurrentUserName() }}</h1>
+        <p class="welcome-subtitle" *ngIf="getEngagementLabel() !== 'No engagement selected'">{{ getEngagementLabel() }}</p>
+        <p class="welcome-subtitle" *ngIf="getEngagementLabel() === 'No engagement selected'">Select an engagement to begin</p>
+      </div>
+      <div class="quick-actions">
+        <button mat-raised-button color="primary" class="action-btn" (click)="navigateToUploadPage()">
+          <mat-icon>upload_file</mat-icon>
+          <span>Import Data</span>
+        </button>
+        <button mat-raised-button class="action-btn" (click)="goToFlagged()" [disabled]="!stats || stats.flaggedRecords === 0">
+          <mat-icon>fact_check</mat-icon>
+          <span>Review Flagged</span>
+          <span class="action-badge" *ngIf="stats && stats.flaggedRecords > 0">{{ stats.flaggedRecords }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workflow Progress Stepper -->
+  <section class="workflow-section" *ngIf="!isLoading">
+    <div class="workflow-header">
+      <div class="header-text">
+        <h2>
+          <mat-icon class="header-icon-gradient">timeline</mat-icon>
+          AI-Powered Audit Workflow
+        </h2>
+        <p class="workflow-subtitle">Streamline your excise tax audit with intelligent automation at every step</p>
+      </div>
+      <div class="ai-assistant-btn" *ngIf="stats && stats.totalRecords > 0">
+        <button mat-stroked-button (click)="openAIGuidance()" class="ai-guidance-btn">
+          <mat-icon>assistant</mat-icon>
+          <span>Get AI Guidance</span>
+          <span class="beta-badge">AI</span>
+        </button>
+      </div>
+    </div>
+    <div class="workflow-stepper">
+      <div class="workflow-step" 
+           *ngFor="let step of workflowSteps; let isLast = last"
+           [class.completed]="step.completed"
+           [class.active]="getStepStatus(step.id) === 'active'">
+        <div class="step-indicator">
+          <div class="step-circle">
+            <mat-icon *ngIf="step.completed">check</mat-icon>
+            <span *ngIf="!step.completed">{{ step.id }}</span>
+          </div>
+          <div class="step-connector" *ngIf="!isLast"></div>
+        </div>
+        <div class="step-content">
+          <h3 class="step-title">{{ step.label }}</h3>
+          
+          <p class="step-description" *ngIf="step.id === 1">
+            <mat-icon class="desc-icon">sync</mat-icon>
+            Integrate with ERP systems, SAP, Orion, or upload Excel/CSV files
+          </p>
+          <ul class="step-features" *ngIf="step.id === 1">
+            <li><mat-icon>check_circle_outline</mat-icon>ERP/SAP integration</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Automated data sync</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Manual upload option</li>
+          </ul>
+          
+          <p class="step-description" *ngIf="step.id === 2">
+            <mat-icon class="desc-icon">psychology</mat-icon>
+            AI-powered anomaly detection with smart recommendations
+          </p>
+          <ul class="step-features" *ngIf="step.id === 2">
+            <li><mat-icon>check_circle_outline</mat-icon>ML-based risk scoring</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Automated classification</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Interactive review</li>
+          </ul>
+          
+          <p class="step-description" *ngIf="step.id === 3">
+            <mat-icon class="desc-icon">fact_check</mat-icon>
+            AI-assisted review of flagged transactions with recommendations
+          </p>
+          <ul class="step-features" *ngIf="step.id === 3">
+            <li><mat-icon>check_circle_outline</mat-icon>Intelligent prioritization</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Bulk AI review</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Confidence scoring</li>
+          </ul>
+          
+          <p class="step-description" *ngIf="step.id === 4">
+            <mat-icon class="desc-icon">request_quote</mat-icon>
+            Generate IRS Form 720-compliant refund claims automatically
+          </p>
+          <ul class="step-features" *ngIf="step.id === 4">
+            <li><mat-icon>check_circle_outline</mat-icon>Auto-populated forms</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Supporting documentation</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Multi-claim batching</li>
+          </ul>
+          
+          <p class="step-description" *ngIf="step.id === 5">
+            <mat-icon class="desc-icon">send</mat-icon>
+            Submit claims electronically with IRS compliance validation
+          </p>
+          <ul class="step-features" *ngIf="step.id === 5">
+            <li><mat-icon>check_circle_outline</mat-icon>E-filing integration</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Pre-submission checks</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Submission tracking</li>
+          </ul>
+          
+          <p class="step-description" *ngIf="step.id === 6">
+            <mat-icon class="desc-icon">account_balance</mat-icon>
+            Monitor refund status and track recovered amounts in real-time
+          </p>
+          <ul class="step-features" *ngIf="step.id === 6">
+            <li><mat-icon>check_circle_outline</mat-icon>Status dashboard</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Payment notifications</li>
+            <li><mat-icon>check_circle_outline</mat-icon>ROI analytics</li>
+          </ul>
+          
+          <!-- AI Guidance Badge -->
+          <div class="ai-guidance" *ngIf="getStepStatus(step.id) === 'active' && stepAIGuidance[step.id]">
+            <mat-icon>psychology</mat-icon>
+            <span>{{ stepAIGuidance[step.id] }}</span>
+          </div>
+          
+          <button mat-button color="primary" *ngIf="getStepStatus(step.id) === 'active'" (click)="navigateToStep(step.id)">
+            <span>Start Now</span>
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Insights & Recommendations -->
+  <section class="ai-insights-section" *ngIf="stats && stats.totalRecords > 0 && aiInsights">
+    <div class="insights-header">
+      <div class="header-icon">
+        <mat-icon>psychology</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2>AI-Powered Insights</h2>
+        <p>Real-time analysis and recommendations from our AI audit assistant</p>
+      </div>
+    </div>
+
+    <div class="insights-grid">
+      <!-- Key Findings -->
+      <div class="insight-card key-findings">
+        <div class="card-header">
+          <mat-icon>lightbulb</mat-icon>
+          <h3>Key Findings</h3>
+        </div>
+        <div class="findings-list">
+          <div class="finding-item" *ngFor="let finding of aiInsights.keyFindings">
+            <mat-icon [class]="'severity-' + finding.severity">{{ finding.icon }}</mat-icon>
+            <div class="finding-content">
+              <span class="finding-text">{{ finding.text }}</span>
+              <span class="confidence-badge" [class]="'confidence-' + finding.confidenceLevel">{{ finding.confidence }}% confidence</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Recommendations -->
+      <div class="insight-card recommendations">
+        <div class="card-header">
+          <mat-icon>auto_fix_high</mat-icon>
+          <h3>Recommended Actions</h3>
+        </div>
+        <div class="recommendations-list">
+          <div class="recommendation-item" *ngFor="let rec of aiInsights.recommendations">
+            <div class="rec-priority" [class]="'priority-' + rec.priority">{{ rec.priority }}</div>
+            <div class="rec-content">
+              <p class="rec-title">{{ rec.title }}</p>
+              <p class="rec-description">{{ rec.description }}</p>
+              <button mat-button color="primary" (click)="executeAIAction(rec.action)">
+                <span>{{ rec.actionLabel }}</span>
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Performance Metrics -->
+      <div class="insight-card ai-metrics">
+        <div class="card-header">
+          <mat-icon>analytics</mat-icon>
+          <h3>AI Analysis Metrics</h3>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-icon">
+              <mat-icon>speed</mat-icon>
+            </div>
+            <div class="metric-value">{{ aiInsights.detectionAccuracy }}%</div>
+            <div class="metric-label">Detection Accuracy</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-icon">
+              <mat-icon>verified</mat-icon>
+            </div>
+            <div class="metric-value">{{ aiInsights.avgConfidence }}%</div>
+            <div class="metric-label">Avg Confidence</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-icon">
+              <mat-icon>bolt</mat-icon>
+            </div>
+            <div class="metric-value">{{ aiInsights.processingTime }}</div>
+            <div class="metric-label">Avg Processing Time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Visual Analytics Section -->
+  <section class="visual-analytics" *ngIf="stats && stats.totalRecords > 0">
+    <div class="analytics-grid">
+      <!-- Trend Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Transaction Volume Trend</h3>
+          <span class="chart-period">Last 6 Months</span>
+        </div>
+        <div class="chart-content">
+          <div class="trend-chart">
+            <div class="trend-bars">
+              <div class="trend-bar" *ngFor="let month of getTrendData()" [style.height.%]="month.percentage">
+                <div class="bar-label">{{month.value}}</div>
+              </div>
+            </div>
+            <div class="trend-labels">
+              <span *ngFor="let month of getTrendData()">{{month.month}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Anomaly Breakdown Pie Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Anomaly Distribution</h3>
+          <span class="chart-period">Current Period</span>
+        </div>
+        <div class="chart-content">
+          <div class="pie-chart-container">
+            <svg class="pie-chart" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" fill="#0078d4" opacity="0.2"/>
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#0078d4" stroke-width="40"
+                      [attr.stroke-dasharray]="getAnomalyArc(0) + ' ' + getAnomalyTotal()" transform="rotate(-90 100 100)"/>
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#d83b01" stroke-width="40"
+                      [attr.stroke-dasharray]="getAnomalyArc(1) + ' ' + getAnomalyTotal()" 
+                      [attr.stroke-dashoffset]="'-' + getAnomalyArc(0)" transform="rotate(-90 100 100)"/>
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#107c10" stroke-width="40"
+                      [attr.stroke-dasharray]="getAnomalyArc(2) + ' ' + getAnomalyTotal()" 
+                      [attr.stroke-dashoffset]="'-' + (getAnomalyArc(0) + getAnomalyArc(1))" transform="rotate(-90 100 100)"/>
+            </svg>
+            <div class="pie-legend">
+              <div class="legend-item" *ngFor="let type of getAnomalyTypes()">
+                <span class="legend-color" [style.background]="type.color"></span>
+                <span class="legend-label">{{type.label}}</span>
+                <span class="legend-value">{{type.count}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROI & Business Impact Section -->
+  <section class="roi-section" *ngIf="stats && stats.totalRecords > 0">
+    <div class="roi-header">
+      <mat-icon>trending_up</mat-icon>
+      <h2>Business Impact & ROI</h2>
+    </div>
+    <div class="roi-grid">
+      <div class="roi-card time-saved">
+        <div class="roi-icon">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="roi-content">
+          <h3>{{getTimeSaved()}} Hours</h3>
+          <p>Time Saved with AI</p>
+          <div class="roi-comparison">
+            <span class="manual">Manual: {{getManualTime()}}h</span>
+            <mat-icon>arrow_forward</mat-icon>
+            <span class="ai">AI-Assisted: {{getAITime()}}h</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roi-card cost-savings">
+        <div class="roi-icon">
+          <mat-icon>savings</mat-icon>
+        </div>
+        <div class="roi-content">
+          <h3>${{getCostSavings() | number:'1.0-0'}}</h3>
+          <p>Labor Cost Savings</p>
+          <div class="roi-detail">at $150/hour audit rate</div>
+        </div>
+      </div>
+
+      <div class="roi-card accuracy">
+        <div class="roi-icon">
+          <mat-icon>verified</mat-icon>
+        </div>
+        <div class="roi-content">
+          <h3>{{getAccuracyImprovement()}}%</h3>
+          <p>Accuracy Improvement</p>
+          <div class="roi-detail">vs. manual review</div>
+        </div>
+      </div>
+
+      <div class="roi-card recovery-rate">
+        <div class="roi-icon">
+          <mat-icon>monetization_on</mat-icon>
+        </div>
+        <div class="roi-content">
+          <h3>{{getRecoveryRate()}}%</h3>
+          <p>Recovery Rate</p>
+          <div class="roi-detail">Claims identified</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Performance Comparison -->
+  <section class="ai-comparison" *ngIf="stats && stats.totalRecords > 0">
+    <div class="comparison-header">
+      <mat-icon>psychology</mat-icon>
+      <h2>AI-Assisted vs. Manual Review</h2>
+    </div>
+    <div class="comparison-grid">
+      <div class="comparison-metric">
+        <div class="metric-label">Review Speed</div>
+        <div class="metric-bars">
+          <div class="metric-bar manual">
+            <span class="bar-label">Manual</span>
+            <div class="bar-fill" style="width: 30%"></div>
+            <span class="bar-value">15 min/transaction</span>
+          </div>
+          <div class="metric-bar ai">
+            <span class="bar-label">AI-Assisted</span>
+            <div class="bar-fill" style="width: 100%"></div>
+            <span class="bar-value">30 sec/transaction</span>
+          </div>
+        </div>
+        <div class="metric-improvement">30x Faster</div>
+      </div>
+
+      <div class="comparison-metric">
+        <div class="metric-label">Detection Rate</div>
+        <div class="metric-bars">
+          <div class="metric-bar manual">
+            <span class="bar-label">Manual</span>
+            <div class="bar-fill" style="width: 75%"></div>
+            <span class="bar-value">75%</span>
+          </div>
+          <div class="metric-bar ai">
+            <span class="bar-label">AI-Assisted</span>
+            <div class="bar-fill" style="width: 98%"></div>
+            <span class="bar-value">98%</span>
+          </div>
+        </div>
+        <div class="metric-improvement">+23% Better</div>
+      </div>
+
+      <div class="comparison-metric">
+        <div class="metric-label">Confidence Score</div>
+        <div class="metric-bars">
+          <div class="metric-bar manual">
+            <span class="bar-label">Manual</span>
+            <div class="bar-fill" style="width: 70%"></div>
+            <span class="bar-value">70%</span>
+          </div>
+          <div class="metric-bar ai">
+            <span class="bar-label">AI-Assisted</span>
+            <div class="bar-fill" style="width: 95%"></div>
+            <span class="bar-value">95%</span>
+          </div>
+        </div>
+        <div class="metric-improvement">+25% Higher</div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- Key Metrics -->
+  <section class="stats-section" aria-label="Dashboard statistics">
+    <div class="stats-grid" *ngIf="!isLoading && stats">
+      <div class="stat-card" (click)="navigateToAnalyticsPage()">
+        <div class="stat-icon">
+          <mat-icon>description</mat-icon>
+        </div>
+        <div class="stat-content">
+          <h3 class="stat-value">{{ stats.totalRecords | number }}</h3>
+          <p class="stat-label">Total Transactions</p>
+        </div>
+      </div>
+
+      <div class="stat-card highlight" (click)="navigateToFlaggedPage()">
+        <div class="stat-icon warning">
+          <mat-icon>warning</mat-icon>
+        </div>
+        <div class="stat-content">
+          <h3 class="stat-value">{{ stats.flaggedRecords | number }}</h3>
+          <p class="stat-label">Flagged Items</p>
+          <p class="stat-detail">{{ getFlaggedPercentage() }}% of total</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon reviewed-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-content">
+          <h3 class="stat-value">{{ stats.reviewedRecords | number }}</h3>
+          <p class="stat-label">Reviewed</p>
+          <p class="stat-detail">{{ getReviewProgress() }}% complete</p>
+        </div>
+      </div>
+
+      <div class="stat-card recovery">
+        <div class="stat-icon recovery-icon">
+          <mat-icon>monetization_on</mat-icon>
+        </div>
+        <div class="stat-content">
+          <h3 class="stat-value">${{ stats.potentialRecovery | number:'1.0-0' }}</h3>
+          <p class="stat-label">Potential Recovery</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div class="stats-grid" *ngIf="isLoading">
+      <div class="stat-card skeleton" *ngFor="let i of [1,2,3,4]">
+        <div class="skeleton-icon"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-line large"></div>
+          <div class="skeleton-line small"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- Next Steps Guidance -->
+  <section class="guidance-section" *ngIf="stats" aria-label="Next steps guidance">
+    <div class="guidance-card" *ngIf="stats.totalRecords === 0">
+      <mat-icon class="guidance-icon">info</mat-icon>
+      <div class="guidance-content">
+        <h3>Get Started</h3>
+        <p>Upload your fuel transaction data to begin the audit process. You can upload an Excel/CSV file or generate demo data to explore the platform.</p>
+        <button mat-raised-button color="primary" (click)="goToUpload()">
+          <mat-icon>upload</mat-icon>
+          Upload Data
+        </button>
+      </div>
+    </div>
+
+    <div class="guidance-card" *ngIf="stats.totalRecords > 0 && stats.flaggedRecords > 0 && stats.reviewedRecords === 0">
+      <mat-icon class="guidance-icon warning">priority_high</mat-icon>
+      <div class="guidance-content">
+        <h3>Action Required</h3>
+        <p>{{ stats.flaggedRecords }} transactions have been flagged for review. Review these anomalies to identify potential tax refund opportunities.</p>
+        <button mat-raised-button color="accent" (click)="goToFlagged()">
+          <mat-icon>fact_check</mat-icon>
+          Review Flagged Items
+        </button>
+      </div>
+    </div>
+
+    <div class="guidance-card success" *ngIf="stats.reviewedRecords > 0">
+      <mat-icon class="guidance-icon success">check_circle</mat-icon>
+      <div class="guidance-content">
+        <h3>Great Progress!</h3>
+        <p>You've reviewed {{ stats.reviewedRecords }} transaction(s). Continue reviewing flagged items or view detailed analytics.</p>
+        <div class="button-group">
+          <button mat-stroked-button (click)="goToFlagged()" *ngIf="stats.reviewedRecords < stats.flaggedRecords">
+            <mat-icon>fact_check</mat-icon>
+            Continue Review
+          </button>
+          <button mat-raised-button color="primary" (click)="goToAnalytics()">
+            <mat-icon>analytics</mat-icon>
+            View Analytics
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

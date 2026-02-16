@@ -1,0 +1,40 @@
+graph TB
+    Start([Auditor Starts Work]) --> Login[Step 1: Login]
+    Login --> Select[Step 2: Select Tax Type<br/>Fuel, HUVT, Alcohol, Tobacco]
+    
+    Select --> Client[Step 3: Choose Client<br/>AI shows top priorities]
+    Client --> Engagement[Step 4: Pick Engagement<br/>AI highlights urgent ones]
+    
+    Engagement --> Upload[Step 5: Upload Transactions<br/>Drag & drop CSV file]
+    Upload --> AIValidate{AI Validates File}
+    
+    AIValidate -->|✓ Valid| Process[AI Processes Data<br/>Real-time analysis]
+    AIValidate -->|✗ Errors| Fix[See Smart Error Messages<br/>& Fix Suggestions]
+    Fix --> Upload
+    
+    Process --> Dashboard[Step 6: View Dashboard<br/>See flagged anomalies]
+    Dashboard --> Review[Step 7: Review Flagged Items<br/>High/Medium/Low risk]
+    
+    Review --> Agent{Run AI Agent Review?}
+    Agent -->|Yes| AIReview[AI Analyzes Transaction<br/>3 seconds per item]
+    Agent -->|No| Manual[Manual Review]
+    
+    AIReview --> Decision[AI Recommendation:<br/>Approve/Reject/Review]
+    Decision --> Accept{Accept AI Decision?}
+    
+    Accept -->|Yes| Apply[Apply Recommendation<br/>Auto-updates status]
+    Accept -->|No| Manual
+    
+    Manual --> MarkDone[Mark Complete]
+    Apply --> MarkDone
+    
+    MarkDone --> More{More Transactions?}
+    More -->|Yes| Review
+    More -->|No| Export[Step 8: Export Results<br/>CSV, PDF, Reports]
+    
+    Export --> End([Audit Complete!<br/>30x Faster])
+    
+    style Start fill:#667eea,color:#fff
+    style AIReview fill:#764ba2,color:#fff
+    style Decision fill:#667eea,color:#fff
+    style End fill:#10b981,color:#fff

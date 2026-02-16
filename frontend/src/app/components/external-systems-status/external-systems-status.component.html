@@ -1,0 +1,64 @@
+<div class="external-systems-container">
+  <div class="systems-header">
+    <div class="header-content">
+      <mat-icon class="header-icon">hub</mat-icon>
+      <div class="header-text">
+        <h3>External Systems</h3>
+        <p>Real-time connection status for integrated services</p>
+      </div>
+    </div>
+    <button mat-icon-button (click)="refreshStatus()" class="refresh-btn" title="Refresh status">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <div class="systems-grid">
+    <div *ngFor="let system of systems" class="system-card" [class]="system.status">
+      <div class="system-header">
+        <div class="system-icon">
+          <mat-icon [style.color]="getStatusColor(system)">{{ getStatusIcon(system) }}</mat-icon>
+        </div>
+        <div class="system-info">
+          <h4>{{ system.displayName }}</h4>
+          <div class="status-badge" [style.background-color]="getStatusColor(system)">
+            <span class="status-text">{{ getStatusText(system) }}</span>
+            <mat-icon class="status-icon" *ngIf="system.status === 'loading'" class="spinning">hourglass_empty</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="system-details">
+        <p class="description">{{ system.description }}</p>
+        <div class="status-details" *ngIf="system.details">
+          <mat-icon class="detail-icon">info</mat-icon>
+          <span>{{ system.details }}</span>
+        </div>
+        <div class="last-checked">
+          <mat-icon class="time-icon">schedule</mat-icon>
+          <span>Last checked: {{ system.lastChecked | date:'short' }}</span>
+        </div>
+      </div>
+
+      <div class="system-actions" *ngIf="system.actionLabel && system.actionEnabled">
+        <button mat-stroked-button
+                color="primary"
+                (click)="onSystemAction(system)"
+                class="action-btn">
+          <mat-icon>{{ system.name === 'irs-api' ? 'swap_horiz' : 'settings' }}</mat-icon>
+          {{ system.actionLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="systems-footer">
+    <div class="footer-info">
+      <mat-icon>security</mat-icon>
+      <span>All connections are secure and monitored</span>
+    </div>
+    <div class="auto-refresh">
+      <mat-icon>autorenew</mat-icon>
+      <span>Auto-refreshes every 30 seconds</span>
+    </div>
+  </div>
+</div>

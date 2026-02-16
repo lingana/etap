@@ -1,0 +1,19 @@
+graph TD
+    A[Client List] --> B[AI Scoring Engine]
+    B --> C{Calculate Priority Score}
+    C --> D[Active Engagements +50pts]
+    C --> E[High Recovery Potential +30pts]
+    C --> F[Current Fiscal Year +15pts]
+    C --> G[Recent Activity +5pts]
+    
+    D --> H[Sort by Score]
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> I[Display Recommendations]
+    I --> J[Top Priority Badge]
+    I --> K[Reasoning Explanation]
+    
+    style B fill:#667eea
+    style C fill:#764ba2

@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant AIValidator
+    participant Parser
+    participant DB
+    
+    User->>Frontend: Upload CSV File
+    Frontend->>API: POST /upload
+    API->>AIValidator: Validate Format
+    AIValidator->>AIValidator: Check Headers
+    AIValidator->>AIValidator: Detect Encoding
+    AIValidator->>AIValidator: Validate Schema
+    AIValidator-->>API: Validation Result
+    
+    alt Valid File
+        API->>Parser: Parse Transactions
+        Parser->>DB: Store Records
+        DB-->>API: Confirmation
+        API-->>Frontend: Success + Stats
+        Frontend-->>User: Show Progress
+    else Invalid File
+        API-->>Frontend: Validation Errors
+        Frontend-->>User: Error Details + Suggestions
+    end

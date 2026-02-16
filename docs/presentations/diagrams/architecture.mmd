@@ -1,0 +1,52 @@
+graph TB
+    subgraph "Frontend - Angular 17"
+        UI[User Interface]
+        Login[Smart Login]
+        Selection[AI-Powered Selection]
+        Upload[Intelligent Upload]
+        Dashboard[Analytics Dashboard]
+        Review[Agentic Review]
+    end
+    
+    subgraph "Backend - .NET 8"
+        API[REST API]
+        Auth[JWT Authentication]
+        Services[Business Services]
+        AgenticAI[AI Agent Service]
+        IRS[IRS Connector]
+    end
+    
+    subgraph "AI Layer"
+        OpenAI[Azure OpenAI GPT-4]
+        RAG[IRS RAG System]
+        SK[Semantic Kernel]
+        Anomaly[Anomaly Detection]
+    end
+    
+    subgraph "Data Sources"
+        DB[(In-Memory DB)]
+        IRSLive[Live IRS APIs]
+        Regulations[Tax Regulations]
+    end
+    
+    UI --> API
+    Login --> Auth
+    Selection --> Services
+    Upload --> Services
+    Dashboard --> Services
+    Review --> AgenticAI
+    
+    AgenticAI --> OpenAI
+    AgenticAI --> RAG
+    AgenticAI --> SK
+    Services --> Anomaly
+    
+    IRS --> IRSLive
+    IRS --> Regulations
+    RAG --> Regulations
+    
+    Services --> DB
+    
+    style AgenticAI fill:#667eea
+    style OpenAI fill:#764ba2
+    style RAG fill:#667eea

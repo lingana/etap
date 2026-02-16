@@ -1,0 +1,128 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2>
+      <mat-icon class="agent-icon">smart_toy</mat-icon>
+      AI Agent Review Result
+    </h2>
+    <button mat-icon-button (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="dialog-content">
+    <!-- Transaction Info -->
+    <div class="info-section">
+      <h3>Transaction: {{ data.result.transactionNumber }}</h3>
+      <p class="record-id">Record ID: {{ data.result.recordID }}</p>
+    </div>
+
+    <!-- Recommendation Badge -->
+    <div class="recommendation-section">
+      <div class="recommendation-badge" [ngClass]="getRecommendationClass()">
+        <mat-icon>{{ data.result.recommendation === 'APPROVE' ? 'check_circle' : 
+                      data.result.recommendation === 'REJECT' ? 'cancel' : 'info' }}</mat-icon>
+        <span>{{ data.result.recommendation }}</span>
+      </div>
+      <div class="confidence-bar">
+        <div class="confidence-label">Confidence: {{ (data.result.confidenceScore * 100).toFixed(0) }}%</div>
+        <mat-progress-bar 
+          mode="determinate" 
+          [value]="data.result.confidenceScore * 100"
+          [color]="data.result.confidenceScore > 0.8 ? 'primary' : 'warn'">
+        </mat-progress-bar>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-section">
+      <div class="metric-card">
+        <mat-icon>account_balance</mat-icon>
+        <div class="metric-content">
+          <div class="metric-label">Potential Recovery</div>
+          <div class="metric-value">{{ data.result.recommendedClaimAmount ? '$' + data.result.recommendedClaimAmount.toFixed(2) : 'N/A' }}</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <mat-icon>assignment</mat-icon>
+        <div class="metric-content">
+          <div class="metric-label">IRS Schedule</div>
+          <div class="metric-value">{{ data.result.recommendedSchedule ? 'Schedule ' + data.result.recommendedSchedule : 'N/A' }}</div>
+        </div>
+      </div>
+      <div class="metric-card" [ngClass]="getRiskClass()">
+        <mat-icon>warning</mat-icon>
+        <div class="metric-content">
+          <div class="metric-label">Risk Level</div>
+          <div class="metric-value">{{ data.result.riskLevel }}</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <mat-icon>schedule</mat-icon>
+        <div class="metric-content">
+          <div class="metric-label">Processing Time</div>
+          <div class="metric-value">{{ formatDuration(data.result.processingTime) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Assessment -->
+    <div class="assessment-section">
+      <h3>
+        <mat-icon>rate_review</mat-icon>
+        Final Assessment
+      </h3>
+      <p>{{ data.result.finalAssessment }}</p>
+    </div>
+
+    <!-- Reasoning Steps -->
+    <div class="reasoning-section">
+      <h3>
+        <mat-icon>psychology</mat-icon>
+        Agent Reasoning Steps
+      </h3>
+      <div class="reasoning-steps">
+        <div *ngFor="let step of data.result.reasoningSteps; let i = index" class="reasoning-step">
+          <div class="step-header">
+            <div class="step-number">{{ i + 1 }}</div>
+            <strong class="step-action">{{ step.action }}</strong>
+          </div>
+          <div class="step-content">
+            <div class="step-thought">
+              <mat-icon class="step-icon">lightbulb</mat-icon>
+              <em>{{ step.thought }}</em>
+            </div>
+            <div class="step-result">
+              <mat-icon class="step-icon">check_circle</mat-icon>
+              <span>{{ parseCitations(step.result).text }}</span>
+              <!-- Display citations as clickable links -->
+              <div class="citations" *ngIf="parseCitations(step.result).citations.length > 0">
+                <mat-icon class="citation-icon">library_books</mat-icon>
+                <span class="citation-label">Citations:</span>
+                <span class="citation-links">
+                  <a *ngFor="let citation of parseCitations(step.result).citations; let isLast = last"
+                     [href]="getCitationUrl(citation)"
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     class="citation-link">
+                    {{ citation }}{{ !isLast ? ', ' : '' }}
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-raised-button (click)="close()" tabindex="2">
+      <mat-icon>close</mat-icon>
+      Close
+    </button>
+    <button mat-flat-button color="primary" (click)="applyRecommendation()" tabindex="1" class="apply-button">
+      <mat-icon>check_circle</mat-icon>
+      Apply Recommendation
+    </button>
+  </div>
+</div>

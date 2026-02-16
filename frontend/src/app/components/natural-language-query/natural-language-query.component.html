@@ -1,0 +1,117 @@
+<div class="query-container">
+  <button class="close-dialog-btn" mat-icon-button (click)="closeDialog()" aria-label="Close dialog">
+    <mat-icon>close</mat-icon>
+  </button>
+  <div class="query-section">
+    <h3>Natural Language Search</h3>
+    <div class="query-input-wrapper">
+      <div class="input-container">
+        <input 
+          type="text" 
+          class="query-input"
+          [(ngModel)]="userQuery"
+          placeholder="Try: 'Show me transactions over $500 in Texas'"
+          (keydown)="onKeyDown($event)"
+          (focus)="onQueryInputFocus()"
+          (blur)="onQueryInputBlur()"
+          [disabled]="isSearching">
+        <button class="search-btn" (click)="executeQuery()" [disabled]="!userQuery.trim() || isSearching">
+          <span *ngIf="!isSearching">🔍 Search</span>
+          <span *ngIf="isSearching">⟳ Searching...</span>
+        </button>
+        <button *ngIf="userQuery" class="clear-btn" (click)="clearQuery()" title="Clear">✕</button>
+      </div>
+
+      <!-- Suggested Queries Dropdown -->
+      <div *ngIf="showSuggestions && suggestedQueries.length > 0" class="suggestions-dropdown">
+        <div class="suggestions-header">Suggested Queries:</div>
+        <button *ngFor="let suggestion of suggestedQueries" 
+                class="suggestion-item"
+                (click)="selectSuggestedQuery(suggestion)">
+          <span class="suggestion-icon">💡</span>
+          <span class="suggestion-text">{{ suggestion }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isSearching" class="search-loading">
+    <div class="spinner"></div>
+    <p>Searching transactions...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isSearching && hasError" class="search-error">
+    <mat-icon class="error-icon">warning</mat-icon>
+    <div>
+      <p class="error-message">{{ errorMessage }}</p>
+      <button class="retry-btn" (click)="executeQuery()">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div *ngIf="!isSearching && !hasError && queryResults.length > 0" class="results-section">
+    <div class="results-header">
+      <span class="results-count">Found {{ queryResults.length }} transactions</span>
+      <button class="export-btn" (click)="exportResults()" title="Export to CSV">
+        📥 Export
+      </button>
+    </div>
+
+    <div class="results-table-wrapper">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Transaction #</th>
+            <th>Merchant</th>
+            <th>State</th>
+            <th>Date</th>
+            <th>Price/Unit</th>
+            <th>Anomaly Score</th>
+            <th>Claim Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let transaction of queryResults | slice: (pageNumber-1)*pageSize : pageNumber*pageSize" 
+              class="result-row"
+              [class.high-anomaly]="transaction.anomalyScore > 0.8">
+            <td class="txn-number">{{ transaction.transactionNumber }}</td>
+            <td class="merchant-name">{{ transaction.merchantName }}</td>
+            <td class="state">{{ transaction.merchantState }}</td>
+            <td class="date">{{ transaction.transactionDate | date: 'MMM dd, yyyy' }}</td>
+            <td class="price">${{ transaction.pricePerUnit | number: '1.2-4' }}</td>
+            <td class="anomaly-score">
+              <span class="score-badge" [class.critical]="transaction.anomalyScore > 0.8">
+                {{ transaction.anomalyScore | number: '1.3' }}
+              </span>
+            </td>
+            <td class="claim-type" [class]="transaction.predictedClaimType.toLowerCase()">
+              {{ transaction.predictedClaimType }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="queryResults.length > pageSize" class="pagination">
+      <button (click)="pageNumber = pageNumber - 1" [disabled]="pageNumber === 1">← Previous</button>
+      <span class="page-info">Page {{ pageNumber }} of {{ (queryResults.length + pageSize - 1) / pageSize | number: '1.0-0' }}</span>
+      <button (click)="pageNumber = pageNumber + 1" [disabled]="pageNumber * pageSize >= queryResults.length">Next →</button>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isSearching && !hasError && queryResults.length === 0 && userQuery" class="no-results">
+    <span class="empty-icon">🔍</span>
+    <p>No transactions found matching your query.</p>
+    <p class="hint">Try a different search or use one of the suggested queries.</p>
+  </div>
+
+  <div *ngIf="!isSearching && !hasError && queryResults.length === 0 && !userQuery" class="empty-state">
+    <span class="empty-icon">🔍</span>
+    <p>Search for transactions using natural language</p>
+    <p class="hint">Type in the search box or select a suggestion to get started</p>
+  </div>
+</div>

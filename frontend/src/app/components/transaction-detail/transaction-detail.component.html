@@ -1,0 +1,169 @@
+<div class="detail-container" *ngIf="transaction" role="dialog" aria-modal="true" aria-labelledby="transactionDetailTitle" tabindex="-1">
+  <div class="detail-header">
+    <h2 id="transactionDetailTitle">Transaction Details</h2>
+    <button class="close-btn" (click)="closePanel()" aria-label="Close details panel" tabindex="0">✕</button>
+  </div>
+
+  <div class="detail-content">
+    <div class="section">
+      <h3>Basic Information</h3>
+      <div class="field">
+        <label>Record ID:</label>
+        <span>{{ transaction.recordID }}</span>
+      </div>
+      <div class="field">
+        <label>Transaction #:</label>
+        <span>{{ transaction.transactionNumber }}</span>
+      </div>
+      <div class="field">
+        <label>Date:</label>
+        <span>{{ transaction.transactionDate | date: 'yyyy-MM-dd HH:mm' }}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Merchant Information</h3>
+      <div class="field">
+        <label>Name:</label>
+        <span>{{ transaction.merchantName }}</span>
+      </div>
+      <div class="field">
+        <label>State:</label>
+        <span>{{ transaction.merchantState }}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Fuel Transaction</h3>
+      <div class="field">
+        <label>Fuel Type:</label>
+        <span>{{ transaction.fuelType }}</span>
+      </div>
+      <div class="field">
+        <label>Quantity:</label>
+        <span>{{ transaction.quantity }} gal</span>
+      </div>
+      <div class="field">
+        <label>Price/Unit:</label>
+        <span>${{ transaction.pricePerUnit | number: '1.2-4' }}</span>
+      </div>
+      <div class="field">
+        <label>Net Cost:</label>
+        <span>${{ transaction.netCost | number: '1.2-2' }}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Tax Analysis</h3>
+      <div class="field">
+        <label>Reported Tax:</label>
+        <span>${{ transaction.totalTaxAmount | number: '1.2-2' }}</span>
+      </div>
+      <div class="field">
+        <label>Expected Tax:</label>
+        <span>${{ transaction.expectedTaxAmount | number: '1.2-2' }}</span>
+      </div>
+      <div class="field">
+        <label>Difference:</label>
+        <span [ngClass]="transaction.taxDifference > 0 ? 'text-red' : 'text-green'">
+          ${{ transaction.taxDifference | number: '1.2-2' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Anomaly Detection</h3>
+      <div class="field">
+        <label>Anomaly Score:</label>
+        <span>{{ transaction.anomalyScore | number: '1.2-2' }}</span>
+      </div>
+      <div class="field" *ngIf="transaction.confidence">
+        <label>Confidence:</label>
+        <span>{{ transaction.confidence | number: '1.2-2' }}</span>
+      </div>
+      <div class="field">
+        <label>Reason:</label>
+        <p class="reason-text">{{ transaction.anomalyReason }}</p>
+      </div>
+    </div>
+
+    <div *ngIf="transaction.explanation || transaction.explanationText" class="section">
+      <h3>GenAI Explanation</h3>
+      <div class="explanation-text">
+        {{ transaction.explanation || transaction.explanationText }}
+      </div>
+    </div>
+
+    <div class="section audit-section">
+      <!-- AI Recommendation Feedback -->
+      <div class="ai-feedback-row" *ngIf="transaction.predictedClaimType">
+        <span class="ai-feedback-label">Was this AI recommendation helpful?</span>
+        <button mat-icon-button color="primary" (click)="submitAIFeedback(true)" [disabled]="aiFeedbackSubmitting" aria-label="AI recommendation helpful">
+          <mat-icon>thumb_up</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" (click)="submitAIFeedback(false)" [disabled]="aiFeedbackSubmitting" aria-label="AI recommendation not helpful">
+          <mat-icon>thumb_down</mat-icon>
+        </button>
+      </div>
+      <h3>Audit Review</h3>
+      <form [formGroup]="reviewForm" class="review-form">
+        <div class="form-group">
+          <label for="decision" class="form-label" aria-label="Decision">Decision *
+            <button mat-icon-button tabindex="0" matTooltip="Select the audit outcome for this transaction. Over Payment: Taxpayer overpaid, Under Payment: Taxpayer underpaid, No Issue: No discrepancy found." aria-label="Help: Decision options" class="help-icon">
+              <mat-icon>help_outline</mat-icon>
+            </button>
+          </label>
+          <select id="decision" formControlName="decision" class="select-control" aria-label="Audit decision" required>
+            <option value="" disabled>Select a decision...</option>
+            <option value="OVER" aria-label="Over Payment">Over Payment</option>
+            <option value="UNDER" aria-label="Under Payment">Under Payment</option>
+            <option value="OK" aria-label="No Issue">No Issue</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="status" class="form-label" aria-label="Status">Status *
+            <button mat-icon-button tabindex="0" matTooltip="Current status of the transaction review. Pending: Awaiting review, Approved: Review approved, Rejected: Review rejected, Reviewed: Initial review complete." aria-label="Help: Status options" class="help-icon">
+              <mat-icon>help_outline</mat-icon>
+            </button>
+          </label>
+          <select id="status" formControlName="status" class="select-control" aria-label="Review status" required>
+            <option value="" disabled>Select status...</option>
+            <option value="PENDING" aria-label="Pending">Pending</option>
+            <option value="APPROVED" aria-label="Approved">Approved</option>
+            <option value="REJECTED" aria-label="Rejected">Rejected</option>
+            <option value="REVIEWED" aria-label="Reviewed">Reviewed</option>
+            <option value="CLAIMED" aria-label="Claimed">Claimed</option>
+          </select>
+        </div>
+
+        <div class="form-group notes-group">
+          <label for="notes" class="form-label">Auditor Notes</label>
+          <div class="notes-row">
+            <textarea id="notes" formControlName="notes" class="textarea-control" rows="3" placeholder="Enter your notes..." aria-label="Auditor notes"></textarea>
+            <button mat-stroked-button type="button" class="ai-draft-btn" (click)="draftAIAuditComment()" [disabled]="aiDrafting" aria-label="AI draft comment">
+              <mat-icon>smart_toy</mat-icon>
+              <span *ngIf="!aiDrafting">AI Draft</span>
+              <span *ngIf="aiDrafting">Drafting...</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="amount" class="form-label">Adjustment Amount ($)</label>
+          <input id="amount" type="number" formControlName="adjustmentAmount" class="input-control" step="0.01" placeholder="0.00" aria-label="Adjustment amount" min="0" />
+        </div>
+
+        <button 
+          type="button"
+          (click)="submitReview()"
+          [disabled]="isSubmitting || !reviewForm.valid"
+          class="submit-btn"
+          aria-label="Save review"
+        >
+          {{ isSubmitting ? 'Saving...' : 'Save Review' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

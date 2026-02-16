@@ -1,0 +1,34 @@
+graph TB
+    A[Transaction] --> B[AI Agent]
+    
+    B --> C[Step 1: Verify Transaction Details]
+    C --> D{Data Complete?}
+    D -->|Yes| E[Step 2: Calculate Expected Tax]
+    D -->|No| F[Request Additional Info]
+    
+    E --> G[IRS RAG System]
+    G --> H[Fetch Regulatory Context]
+    H --> I[Get Current Tax Rates]
+    I --> J[Retrieve Compliance Rules]
+    
+    J --> K[Step 3: Analyze Variance]
+    K --> L{Variance > 10%?}
+    
+    L -->|Yes| M[Step 4: Check Safe Harbor]
+    L -->|No| N[APPROVE]
+    
+    M --> O{Safe Harbor Met?}
+    O -->|Yes| P[APPROVE with Notes]
+    O -->|No| Q[REJECT]
+    
+    M --> R[Step 5: Calculate Recovery]
+    R --> S[Determine IRS Schedule]
+    S --> T[Step 6: Final Assessment]
+    
+    T --> U[Generate Recommendation]
+    U --> V[Provide Citations]
+    V --> W[Return Result to Auditor]
+    
+    style B fill:#667eea
+    style G fill:#764ba2
+    style T fill:#667eea

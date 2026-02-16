@@ -1,0 +1,174 @@
+<div class="activity-log-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="icon-wrapper">
+        <mat-icon>history</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Activity Log</h1>
+        <p class="header-subtitle">Audit trail and system activity</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button mat-raised-button color="primary" class="export-btn" (click)="exportLogs()">
+        <mat-icon>download</mat-icon>
+        Export Audit Trail
+      </button>
+    </div>
+  </div>
+
+  <!-- Toolbar with Filters -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="filter-group">
+        <label class="filter-label">ACTION</label>
+        <select class="filter-select" [(ngModel)]="selectedAction" (change)="applyFilters()">
+          <option value="">All Actions</option>
+          <option *ngFor="let action of uniqueActions" [value]="action">
+            {{ action }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">USER</label>
+        <select class="filter-select" [(ngModel)]="selectedUser" (change)="applyFilters()">
+          <option value="">All Users</option>
+          <option *ngFor="let user of uniqueUsers" [value]="user">
+            {{ user }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group date-filter">
+        <label class="filter-label">DATE FROM</label>
+        <input type="date" class="filter-input" [(ngModel)]="dateFrom" (change)="applyFilters()">
+      </div>
+
+      <div class="filter-group date-filter">
+        <label class="filter-label">DATE TO</label>
+        <input type="date" class="filter-input" [(ngModel)]="dateTo" (change)="applyFilters()">
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <button mat-stroked-button class="clear-btn" (click)="clearFilters()">
+        <mat-icon>clear</mat-icon>
+        Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="results-summary" *ngIf="!isLoading">
+    Showing <strong>{{ filteredLogs.length }}</strong> of <strong>{{ logs.length }}</strong> activity records
+  </div>
+
+  <!-- AI Pattern Detection -->
+  <div class="ai-insights" *ngIf="!isLoading && aiAnalysis && aiAnalysis.patterns.length > 0">
+    <div class="insights-header">
+      <mat-icon class="ai-icon">psychology</mat-icon>
+      <h3>AI Pattern Detection</h3>
+      <span class="pattern-count">{{ aiAnalysis.patterns.length }} patterns detected</span>
+    </div>
+    
+    <div class="patterns-grid">
+      <div class="pattern-card" 
+           *ngFor="let pattern of aiAnalysis.patterns" 
+           [ngClass]="'severity-' + pattern.severity">
+        <div class="pattern-header">
+          <mat-icon class="pattern-icon">{{ pattern.icon }}</mat-icon>
+          <div class="pattern-type-badge" [ngClass]="pattern.type">
+            {{ pattern.type }}
+          </div>
+        </div>
+        <h4 class="pattern-title">{{ pattern.title }}</h4>
+        <p class="pattern-description">{{ pattern.description }}</p>
+      </div>
+    </div>
+
+    <div class="analysis-summary">
+      <div class="summary-stat">
+        <mat-icon>analytics</mat-icon>
+        <div class="stat-details">
+          <div class="stat-value">{{ aiAnalysis.summary.totalActions }}</div>
+          <div class="stat-label">Total Actions</div>
+        </div>
+      </div>
+      <div class="summary-stat">
+        <mat-icon>group</mat-icon>
+        <div class="stat-details">
+          <div class="stat-value">{{ aiAnalysis.summary.uniqueUsers }}</div>
+          <div class="stat-label">Active Users</div>
+        </div>
+      </div>
+      <div class="summary-stat">
+        <mat-icon>trending_up</mat-icon>
+        <div class="stat-details">
+          <div class="stat-value">{{ aiAnalysis.summary.mostCommonAction }}</div>
+          <div class="stat-label">Top Action</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Table -->
+  <div class="logs-container">
+    <div class="table-wrapper" *ngIf="!isLoading && filteredLogs.length > 0">
+      <table class="activity-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Entity</th>
+            <th>Details</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of filteredLogs">
+            <td class="timestamp-cell">
+              <div class="timestamp">{{ log.timestamp | date:'MMM d, y' }}</div>
+              <div class="time">{{ log.timestamp | date:'h:mm a' }}</div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getActionBadgeClass(log.action)">
+                {{ log.action }}
+              </span>
+            </td>
+            <td>
+              <div class="user-cell">
+                <div class="user-name">{{ log.userName }}</div>
+                <div class="user-role">{{ log.userRole }}</div>
+              </div>
+            </td>
+            <td class="entity-cell">
+              {{ log.entityType }} #{{ log.entityId }}
+            </td>
+            <td>
+              <div *ngIf="log.oldValue || log.newValue" class="change-details">
+                <span *ngIf="log.oldValue" class="old-value">{{ log.oldValue }}</span>
+                <mat-icon *ngIf="log.oldValue && log.newValue" class="arrow">arrow_forward</mat-icon>
+                <span *ngIf="log.newValue" class="new-value">{{ log.newValue }}</span>
+              </div>
+            </td>
+            <td class="comments-cell">{{ log.comments }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="loading-state" *ngIf="isLoading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading activity logs...</p>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && filteredLogs.length === 0">
+      <mat-icon>history</mat-icon>
+      <h3>No Activity Found</h3>
+      <p>No activity logs match your current filters.</p>
+    </div>
+  </div>
+</div>

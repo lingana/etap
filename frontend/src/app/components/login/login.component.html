@@ -1,0 +1,145 @@
+<div class="login-container">
+  <div class="login-background">
+    <!-- Animated background elements -->
+    <div class="bg-element bg-1"></div>
+    <div class="bg-element bg-2"></div>
+    <div class="bg-element bg-3"></div>
+  </div>
+
+  <div class="login-card">
+    <!-- Logo & Header -->
+    <div class="login-header">
+      <div class="logo-icon">◆</div>
+      <h1>Excise Tax Analytics Platform</h1>
+      <p class="subtitle">AI-Powered Reverse Audit & Recovery for All Excise Taxes</p>
+      <p class="tagline">Fuel, Aviation, Alcohol, and More</p>
+    </div>
+
+    <!-- Login Form -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username" class="form-label">
+          <mat-icon class="label-icon">person</mat-icon>
+          Username
+        </label>
+        <div class="input-wrapper">
+          <mat-icon class="input-icon">person</mat-icon>
+          <input 
+            id="username"
+            type="text" 
+            formControlName="username" 
+            placeholder="Enter your username"
+            class="form-input"
+            autocomplete="username">
+        </div>
+        <span class="error-message" *ngIf="username?.hasError('required') && username?.touched">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          Username is required
+        </span>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="form-label">
+          <mat-icon class="label-icon">lock</mat-icon>
+          Password
+        </label>
+        <div class="input-wrapper">
+          <mat-icon class="input-icon">lock</mat-icon>
+          <input 
+            id="password"
+            [type]="showPassword ? 'text' : 'password'" 
+            formControlName="password" 
+            placeholder="Enter your password"
+            class="form-input"
+            autocomplete="current-password">
+          <button 
+            type="button" 
+            (click)="togglePasswordVisibility()"
+            class="password-toggle"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            tabindex="-1">
+            <mat-icon>{{ showPassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+        </div>
+        <span class="error-message" *ngIf="password?.hasError('required') && password?.touched">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          Password is required
+        </span>
+      </div>
+
+      <!-- Login Button -->
+      <button mat-raised-button color="primary" type="submit" [disabled]="isLoading" class="login-button">
+        <mat-icon *ngIf="isLoading" class="spinner">hourglass_empty</mat-icon>
+        <span *ngIf="!isLoading">Sign In</span>
+        <span *ngIf="isLoading">Signing in...</span>
+      </button>
+    </form>
+
+    <!-- Demo Credentials Section -->
+    <div class="demo-section">
+      <p class="demo-title">Demo Credentials</p>
+      <p class="demo-subtitle">Click a demo user to fill credentials automatically</p>
+      <div class="demo-users">
+        <button *ngFor="let user of demoUsers" 
+          mat-stroked-button 
+          (click)="fillDemoCredentials(user)"
+          class="demo-button"
+          [attr.aria-label]="'Fill ' + user.role + ' credentials'">
+          <mat-icon class="demo-icon">account_circle</mat-icon>
+          <span>{{ user.role }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+      <div class="ai-badge">
+        <mat-icon>auto_awesome</mat-icon>
+        <span>AI-Powered Platform</span>
+      </div>
+      <div class="feature-item">
+        <mat-icon class="feature-icon">psychology</mat-icon>
+        <div class="feature-text">
+          <p class="feature-title">AI Anomaly Detection</p>
+          <p class="feature-desc">Intelligent transaction analysis</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <mat-icon class="feature-icon">auto_fix_high</mat-icon>
+        <div class="feature-text">
+          <p class="feature-title">Automated Recommendations</p>
+          <p class="feature-desc">Smart insights and priority flagging</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <mat-icon class="feature-icon">speed</mat-icon>
+        <div class="feature-text">
+          <p class="feature-title">30x Faster Audits</p>
+          <p class="feature-desc">AI reduces review time from hours to minutes</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <mat-icon class="feature-icon">security</mat-icon>
+        <div class="feature-text">
+          <p class="feature-title">Secure Access</p>
+          <p class="feature-desc">JWT token-based authentication</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <mat-icon class="feature-icon">verified_user</mat-icon>
+        <div class="feature-text">
+          <p class="feature-title">Role-Based Control</p>
+          <p class="feature-desc">Auditor, Manager, Admin roles</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <p class="version">Excise Tax Analytics Platform v1.0 | Powered by AI</p>
+      <p class="support">For support, contact: <a href="mailto:support&#64;example.com">support&#64;example.com</a></p>
+    </div>
+  </div>
+</div>

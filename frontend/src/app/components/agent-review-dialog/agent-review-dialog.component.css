@@ -1,0 +1,386 @@
+/* Ensure Material Dialog container has proper sizing */
+:host ::ng-deep .mat-mdc-dialog-container {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+:host ::ng-deep .mat-mdc-dialog-surface {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 90vh;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--gradient-primary);
+  color: white;
+  flex-shrink: 0;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+}
+
+.agent-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.dialog-header button {
+  color: white;
+}
+
+.dialog-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.info-section {
+  margin-bottom: 24px;
+}
+
+.info-section h3 {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.record-id {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.recommendation-section {
+  margin-bottom: 24px;
+}
+
+.recommendation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.recommendation-badge mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.recommendation-approve {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+  border: 2px solid var(--success);
+}
+
+.recommendation-reject {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+  border: 2px solid var(--danger);
+}
+
+.recommendation-review {
+  background-color: var(--warning-light);
+  color: var(--warning-dark);
+  border: 2px solid var(--warning);
+}
+
+.confidence-bar {
+  margin-top: 8px;
+}
+
+.confidence-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.metrics-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+}
+
+.metric-card mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.risk-low {
+  border-left-color: var(--success);
+}
+
+.risk-low mat-icon {
+  color: var(--success);
+}
+
+.risk-medium {
+  border-left-color: var(--warning);
+}
+
+.risk-medium mat-icon {
+  color: var(--warning);
+}
+
+.risk-high {
+  border-left-color: var(--warning-dark);
+}
+
+.risk-high mat-icon {
+  color: var(--warning-dark);
+}
+
+.risk-critical {
+  border-left-color: var(--danger);
+}
+
+.risk-critical mat-icon {
+  color: var(--danger);
+}
+
+.assessment-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--info-light);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--info);
+}
+
+.assessment-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  color: var(--info-dark);
+}
+
+.assessment-section p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.reasoning-section {
+  margin-bottom: 24px;
+}
+
+.reasoning-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px 0;
+  color: var(--text-primary);
+}
+
+.step-content {
+  margin: 12px 0;
+}
+
+.step-thought,
+.step-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.step-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.step-thought {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.step-thought .step-icon {
+  color: var(--warning);
+}
+
+.step-result {
+  color: var(--text-primary);
+}
+
+.step-result .step-icon {
+  color: var(--success);
+}
+
+/* Citation styles */
+.citations {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border-left: 3px solid var(--info);
+}
+
+.citation-icon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  color: var(--info);
+}
+
+.citation-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.citation-links {
+  flex: 1;
+}
+
+.citation-link {
+  color: var(--info);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.citation-link:hover {
+  color: var(--info-dark);
+  text-decoration: underline;
+}
+
+.citation-link:not(:last-child)::after {
+  content: ', ';
+  color: var(--text-tertiary);
+  font-weight: normal;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+}
+
+.dialog-actions button {
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apply-button {
+  background: var(--gradient-primary) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.apply-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary) !important;
+}
+
+.apply-button mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Custom Reasoning Steps */
+.reasoning-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reasoning-step {
+  border-left: 3px solid var(--primary);
+  padding-left: 20px;
+  position: relative;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.step-action {
+  font-size: 16px;
+  color: var(--text-primary);
+}

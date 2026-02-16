@@ -1,0 +1,29 @@
+<div *ngIf="filters.length > 0" class="filter-chips-container" role="region" aria-label="Active filters">
+  <div class="filters-label">
+    <mat-icon>filter_list</mat-icon>
+    <span>Active Filters:</span>
+  </div>
+  
+  <div class="chips-wrapper">
+    <mat-chip-set>
+      <mat-chip 
+        *ngFor="let filter of filters" 
+        [removable]="true"
+        (removed)="onRemoveFilter(filter.id)"
+        class="filter-chip"
+        [attr.aria-label]="filter.label + ', remove filter'">
+        {{ filter.label }}: {{ filter.value }}
+        <mat-icon matChipRemove>close</mat-icon>
+      </mat-chip>
+    </mat-chip-set>
+  </div>
+
+  <button 
+    mat-stroked-button 
+    (click)="onClearAll()"
+    class="clear-all-btn"
+    aria-label="Clear all filters">
+    <mat-icon>delete_sweep</mat-icon>
+    Clear All
+  </button>
+</div>
