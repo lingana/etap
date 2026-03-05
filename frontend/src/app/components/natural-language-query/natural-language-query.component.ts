@@ -1,5 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
+import { MatPaginator } from '@angular/material/paginator';
 import { AuditService } from '../../services/audit.service';
 import { ToastService } from '../../services/toast.service';
 import { FlaggedTransaction } from '../../models/transaction.model';
@@ -10,19 +13,31 @@ import { FlaggedTransaction } from '../../models/transaction.model';
   styleUrls: ['./natural-language-query.component.css']
 })
 export class NaturalLanguageQueryComponent implements OnInit {
+  @ViewChild(MatSort) set matSort(sort: MatSort) {
+    if (sort) { this.dataSource.sort = sort; }
+  }
+  @ViewChild(MatPaginator) set matPaginator(paginator: MatPaginator) {
+    if (paginator) { this.dataSource.paginator = paginator; }
+  }
+
   constructor(
     private auditService: AuditService,
     private toastService: ToastService,
     private dialogRef?: MatDialogRef<NaturalLanguageQueryComponent>
   ) { }
+
   userQuery: string = '';
   queryResults: FlaggedTransaction[] = [];
+  dataSource = new MatTableDataSource<FlaggedTransaction>([]);
   isLoading = false;
   isSearching = false;
   hasError = false;
   errorMessage = '';
   showSuggestions = false;
-  displayedColumns: string[] = ['transactionNumber', 'merchantName', 'transactionDate', 'pricePerUnit', 'anomalyScore', 'actions'];
+  displayedColumns: string[] = [
+    'transactionNumber', 'merchantName', 'merchantState', 'transactionDate',
+    'netCost', 'totalTaxAmount', 'anomalyScore', 'predictedClaimType'
+  ];
   pageSize = 10;
   pageNumber = 1;
 
@@ -36,7 +51,6 @@ export class NaturalLanguageQueryComponent implements OnInit {
     'Show all transactions from last 7 days',
     'Find duplicate transactions'
   ];
-
 
   closeDialog(): void {
     if (this.dialogRef) {
@@ -73,11 +87,12 @@ export class NaturalLanguageQueryComponent implements OnInit {
     this.isSearching = true;
     this.hasError = false;
     this.queryResults = [];
-    this.pageNumber = 1;
+    this.dataSource.data = [];
 
     this.auditService.queryTransactionsByNaturalLanguage(this.userQuery).subscribe(
       (response) => {
         this.queryResults = response.results || response;
+        this.dataSource.data = this.queryResults;
         this.isSearching = false;
         
         if (this.queryResults.length === 0) {
@@ -99,6 +114,7 @@ export class NaturalLanguageQueryComponent implements OnInit {
   clearQuery(): void {
     this.userQuery = '';
     this.queryResults = [];
+    this.dataSource.data = [];
     this.hasError = false;
     this.showSuggestions = true;
   }
@@ -120,14 +136,39 @@ export class NaturalLanguageQueryComponent implements OnInit {
     this.toastService.success('Results exported');
   }
 
+  getScoreClass(score: number): string {
+    if (score >= 0.8) return 'score-high';
+    if (score >= 0.6) return 'score-medium';
+    return 'score-low';
+  }
+
+  getClaimTypeClass(type: string): string {
+    switch ((type || '').toUpperCase()) {
+      case 'OVER': return 'badge-over';
+      case 'UNDER': return 'badge-under';
+      case 'OK': return 'badge-ok';
+      default: return 'badge-unknown';
+    }
+  }
+
+  getClaimTypeLabel(type: string): string {
+    switch ((type || '').toUpperCase()) {
+      case 'OVER': return 'Overpayment';
+      case 'UNDER': return 'Underpayment';
+      case 'OK': return 'No Issue';
+      default: return type || 'Unknown';
+    }
+  }
+
   private convertToCsv(data: FlaggedTransaction[]): string {
-    const headers = ['Transaction Number', 'Merchant', 'State', 'Date', 'Price/Unit', 'Anomaly Score', 'Claim Type'];
+    const headers = ['Transaction Number', 'Merchant', 'State', 'Date', 'Amount', 'Tax Paid', 'Anomaly Score', 'Claim Type'];
     const rows = data.map(t => [
       t.transactionNumber,
       t.merchantName,
       t.merchantState,
       new Date(t.transactionDate).toLocaleDateString(),
-      t.pricePerUnit.toFixed(2),
+      t.netCost?.toFixed(2) || '0.00',
+      t.totalTaxAmount?.toFixed(2) || '0.00',
       t.anomalyScore.toFixed(3),
       t.predictedClaimType
     ]);

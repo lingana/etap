@@ -18,7 +18,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { DxDataGridModule, DxButtonModule } from 'devextreme-angular';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { FlaggedTransactionsComponent } from '../../components/flagged-transactions/flagged-transactions.component';
 import { TransactionDetailComponent } from '../../components/transaction-detail/transaction-detail.component';
@@ -64,8 +64,7 @@ const routes: Routes = [
     MatProgressBarModule,
     MatMenuModule,
     MatCheckboxModule,
-    DxDataGridModule,
-    DxButtonModule,
+    MatTooltipModule,
     SkeletonLoaderComponent,
     EmptyStateComponent
   ]

@@ -10,6 +10,14 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Environment variables configuration
+// Azure OpenAI credentials are loaded from environment variables:
+// - AzureOpenAI__ApiKey
+// - AzureOpenAI__Endpoint  
+// - AzureOpenAI__DeploymentId
+// See ENVIRONMENT_VARIABLES.md for setup instructions
+builder.Configuration.AddEnvironmentVariables();
+
 // Configure to use HTTP on both IPv4 and IPv6 on port 5000
 builder.WebHost.UseUrls("http://0.0.0.0:5000", "http://[::]:5000");
 
@@ -18,6 +26,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
 // Use in-memory database for development (no SQL Server required)
@@ -66,7 +75,7 @@ builder.Services.AddScoped<ITaxClientService, TaxClientService>();
 // Azure ML integration removed
 builder.Services.AddScoped<IAnomalyExplanationService, AnomalyExplanationService>();
 builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
-builder.Services.AddScoped<IAzureOpenAIConfigService, AzureOpenAIConfigService>();
+builder.Services.AddSingleton<IAzureOpenAIConfigService, AzureOpenAIConfigService>();
 
 // Add Power BI service
 builder.Services.AddScoped<IPowerBIService, PowerBIService>();
@@ -88,15 +97,23 @@ builder.Services.AddScoped<ExciseTaxAudit.API.Services.Plugins.HistoricalApprova
 // Configure Semantic Kernel with Azure OpenAI (lazy initialization to avoid startup failures)
 builder.Services.AddSingleton<Microsoft.SemanticKernel.Kernel>(sp =>
 {
+    string? endpoint = null;
+    string? deploymentName = null;
+    string? apiKey = null;
+
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+    var config = sp.GetRequiredService<IAzureOpenAIConfigService>();
+
     try
     {
-        var config = sp.GetRequiredService<IAzureOpenAIConfigService>();
-        var endpoint = config.GetEndpoint();
-        var apiKey = config.GetApiKey();
-        var deploymentName = config.GetDeploymentName();
+        endpoint = config.GetEndpoint();
+        apiKey = config.GetApiKey();
+        deploymentName = config.GetDeploymentName();
+
+        logger.LogInformation("🔧 Initializing Semantic Kernel - Endpoint: {Endpoint}, DeploymentId: {DeploymentId}", endpoint, deploymentName);
 
         var kernelBuilder = Microsoft.SemanticKernel.Kernel.CreateBuilder();
-        
+
         kernelBuilder.AddAzureOpenAIChatCompletion(
             deploymentName: deploymentName,
             endpoint: endpoint,
@@ -105,21 +122,50 @@ builder.Services.AddSingleton<Microsoft.SemanticKernel.Kernel>(sp =>
 
         // Register plugins using ImportPluginFromObject
         var kernel = kernelBuilder.Build();
-        
+
         var taxRatePlugin = sp.GetRequiredService<ExciseTaxAudit.API.Services.Plugins.TaxRatePlugin>();
         var calculationPlugin = sp.GetRequiredService<ExciseTaxAudit.API.Services.Plugins.CalculationValidatorPlugin>();
-        
+
         kernel.ImportPluginFromObject(taxRatePlugin, "TaxRate");
         kernel.ImportPluginFromObject(calculationPlugin, "Calculator");
 
+        logger.LogInformation("✅ Semantic Kernel initialized successfully");
         return kernel;
     }
     catch (Exception ex)
     {
+        logger.LogError(ex, "❌ FAILED to initialize Semantic Kernel. Endpoint: {Endpoint}, DeploymentId: {DeploymentId}", endpoint ?? "UNKNOWN", deploymentName ?? "UNKNOWN");
         Console.WriteLine($"⚠️  WARNING: Failed to initialize Semantic Kernel: {ex.Message}");
+        Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
         Console.WriteLine("Agentic review features will be disabled. Check Azure OpenAI configuration.");
-        // Return a minimal kernel that won't crash the app
-        return Microsoft.SemanticKernel.Kernel.CreateBuilder().Build();
+
+        // Return a kernel with the chat completion service registered (even if it might fail later)
+        // This prevents "service not registered" errors in diagnostics
+        var fallbackBuilder = Microsoft.SemanticKernel.Kernel.CreateBuilder();
+
+        // Try to add the service anyway so diagnostics can test the actual connection
+        if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(deploymentName))
+        {
+            try
+            {
+                fallbackBuilder.AddAzureOpenAIChatCompletion(
+                    deploymentName: deploymentName,
+                    endpoint: endpoint,
+                    apiKey: apiKey
+                );
+            }
+            catch
+            {
+                // If even this fails, just return an empty kernel
+                logger.LogWarning("Unable to register Azure OpenAI service even for diagnostics");
+            }
+        }
+
+        return fallbackBuilder.Build();
     }
 });
 
@@ -524,17 +570,22 @@ using (var scope = app.Services.CreateScope())
             for (int i = 0; i < engagementCount; i++)
             {
                 var fiscalYear = startYear + i;
-                var statuses = new[] { 
-                    EngagementStatusEnum.Planning,
-                    EngagementStatusEnum.InProgress,
-                    EngagementStatusEnum.UnderReview,
-                    EngagementStatusEnum.Completed
-                };
                 var types = new[] {
                     EngagementTypeEnum.FullAudit,
                     EngagementTypeEnum.LimitedScope,
                     EngagementTypeEnum.Review,
                     EngagementTypeEnum.Consultation
+                };
+
+                // Balanced status distribution based on engagement count
+                // 25% Completed, 30% InProgress, 25% UnderReview, 20% Planning
+                var statusIndex = engagements.Count % 20;
+                var status = statusIndex switch
+                {
+                    < 5 => EngagementStatusEnum.Completed,      // 25%
+                    < 11 => EngagementStatusEnum.InProgress,    // 30%
+                    < 16 => EngagementStatusEnum.UnderReview,   // 25%
+                    _ => EngagementStatusEnum.Planning          // 20%
                 };
 
                 // Use a stable, human-friendly external ID for demos.
@@ -550,7 +601,7 @@ using (var scope = app.Services.CreateScope())
                     FiscalYearStart = new DateTime(fiscalYear, 1, 1),
                     FiscalYearEnd = new DateTime(fiscalYear, 12, 31),
                     EngagementType = types[random.Next(types.Length)],
-                    Status = statuses[random.Next(statuses.Length)],
+                    Status = status,
                     Description = $"Tax audit engagement for fiscal year {fiscalYear}",
                     LeadAuditorId = managerUser?.Id,
                     BudgetedHours = random.Next(100, 400),

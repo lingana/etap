@@ -15,12 +15,6 @@
           </div>
         </div>
       </div>
-      <div class="header-right" *ngIf="selectedTransaction">
-        <button mat-stroked-button (click)="closeDetails()">
-          <mat-icon>close</mat-icon>
-          Close Details
-        </button>
-      </div>
     </div>
 
     <!-- Toolbar: Filters and Actions -->
@@ -33,6 +27,18 @@
             <option value="high">High Risk</option>
             <option value="medium">Medium Risk</option>
             <option value="low">Low Risk</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Payment Type</label>
+          <select [(ngModel)]="selectedClaimTypeFilter" (change)="applyFilters()" class="filter-select">
+            <option value="all">All Types</option>
+            <option value="OVER">Overpayment</option>
+            <option value="UNDER">Underpayment</option>
+            <option value="EXEMPT">Exempt Use</option>
+            <option value="RATE_ERROR">Rate Error</option>
+            <option value="NEEDS_REVIEW">Needs Review</option>
           </select>
         </div>
 
@@ -66,10 +72,10 @@
           mat-raised-button 
           color="warn" 
           (click)="generateRefundClaim()" 
-          [disabled]="selectedTransactionIds.size === 0"
+          [disabled]="selectedCount === 0"
           title="Generate refund claim from selected transactions">
           <mat-icon>request_quote</mat-icon>
-          Generate Refund Claim ({{ selectedTransactionIds.size }})
+          Generate Refund Claim ({{ selectedCount }})
         </button>
         <button 
           mat-raised-button 
@@ -84,10 +90,10 @@
           mat-raised-button 
           color="accent" 
           (click)="runBulkAgenticReview()" 
-          [disabled]="selectedTransactionIds.size === 0 || isBulkReviewing"
+          [disabled]="selectedCount === 0 || isBulkReviewing"
           title="AI Agent will review selected transactions">
           <mat-icon>psychology</mat-icon>
-          Review Selected ({{ selectedTransactionIds.size }})
+          Review Selected ({{ selectedCount }})
         </button>
         <button 
           mat-stroked-button 
@@ -142,6 +148,14 @@
           <mat-icon>check_circle</mat-icon>
           <span><strong>{{ getApprovedCount() }}</strong> Approved</span>
         </div>
+        <div class="summary-item overpayment">
+          <mat-icon>arrow_upward</mat-icon>
+          <span><strong>{{ getOverpaymentCount() }}</strong> Overpayments</span>
+        </div>
+        <div class="summary-item underpayment">
+          <mat-icon>arrow_downward</mat-icon>
+          <span><strong>{{ getUnderpaymentCount() }}</strong> Underpayments</span>
+        </div>
       </div>
 
       <!-- Loading State with Skeleton -->
@@ -192,8 +206,8 @@
                     <span class="value">${{ transaction.netCost | number:'1.2-2' }}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="label">Fuel:</span>
-                    <span class="value">{{ transaction.fuelType }} ({{ transaction.quantity }} gal)</span>
+                    <span class="label">{{ productLabel }}:</span>
+                    <span class="value">{{ transaction.fuelType }} ({{ transaction.quantity }})</span>
                   </div>
                   <div class="detail-row">
                     <span class="label">Date:</span>
@@ -202,6 +216,14 @@
                   <div class="detail-row">
                     <span class="label">Anomaly Score:</span>
                     <span class="value anomaly-score">{{ transaction.anomalyScore | percent:'1.1-1' }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Type:</span>
+                    <span class="value">
+                      <span class="claim-type-badge" [ngClass]="getClaimTypeColor(transaction.predictedClaimType)">
+                        {{ getClaimTypeLabel(transaction.predictedClaimType) }}
+                      </span>
+                    </span>
                   </div>
                 </div>
 
@@ -227,92 +249,207 @@
           </div>
         </div>
 
-        <!-- Table View (existing) -->
-        <table class="transactions-table">
-          <thead>
-            <tr>
-              <th class="checkbox-column">
-                <mat-checkbox 
-                  (change)="toggleSelectAll()"
-                  [checked]="isAllSelected()"
-                  [indeterminate]="isSomeSelected()"
+        <!-- Table View -->
+        <div *ngIf="viewMode === 'table'" class="mat-table-container">
+          <table mat-table [dataSource]="dataSource" matSort
+                 matSortActive="anomalyScore" matSortDirection="desc"
+                 class="transactions-mat-table">
+
+            <!-- Checkbox Column -->
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox
+                  (change)="$event ? toggleSelectAll() : null"
+                  [checked]="selection.hasValue() && isAllSelected()"
+                  [indeterminate]="selection.hasValue() && !isAllSelected()"
                   [disabled]="isBulkReviewing">
                 </mat-checkbox>
               </th>
-              <th>Record ID</th>
-              <th>Date</th>
-              <th>Merchant</th>
-              <th>State</th>
-              <th>Fuel Type</th>
-              <th>Quantity</th>
-              <th>Amount</th>
-              <th>Tax Paid</th>
-              <th>Score</th>
-              <th>Status</th>
-              <th>Potential Recovery</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let element of displayedTransactions" 
-                [class.selected-row]="isSelected(element)">
-              <td class="checkbox-column">
-                <mat-checkbox 
-                  (change)="toggleSelection(element)"
-                  [checked]="isSelected(element)"
-                  [disabled]="isBulkReviewing"
-                  (click)="$event.stopPropagation()">
+              <td mat-cell *matCellDef="let row">
+                <mat-checkbox
+                  (click)="$event.stopPropagation()"
+                  (change)="$event ? toggleSelection(row) : null"
+                  [checked]="selection.isSelected(row)"
+                  [disabled]="isBulkReviewing">
                 </mat-checkbox>
               </td>
-              <td class="record-id">{{ element.recordID }}</td>
-              <td>{{ element.transactionDate | date: 'MM/dd/yy' }}</td>
-              <td class="merchant">{{ element.merchantName }}</td>
-              <td class="state-badge">{{ element.merchantState }}</td>
-              <td class="fuel-type">{{ element.fuelType }}</td>
-              <td class="numeric">{{ element.quantity | number: '1.1-1' }} gal</td>
-              <td class="numeric amount">${{ element.netCost | number: '1.2-2' }}</td>
-              <td class="numeric tax">{{ element.totalTaxAmount > 0 ? ('$' + (element.totalTaxAmount | number:'1.2-2')) : '-' }}</td>
-              <td>
-                <span [ngClass]="getScoreColor(element.anomalyScore)">
-                  {{ element.anomalyScore | number: '1.2-2' }}
+            </ng-container>
+
+            <!-- Record ID Column -->
+            <ng-container matColumnDef="recordID">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
+              <td mat-cell *matCellDef="let row" class="record-id">{{ row.recordID }}</td>
+            </ng-container>
+
+            <!-- Date Column -->
+            <ng-container matColumnDef="transactionDate">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+              <td mat-cell *matCellDef="let row">{{ row.transactionDate | date: 'MM/dd/yy' }}</td>
+            </ng-container>
+
+            <!-- Merchant Column -->
+            <ng-container matColumnDef="merchantName">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Merchant</th>
+              <td mat-cell *matCellDef="let row" class="merchant">{{ row.merchantName }}</td>
+            </ng-container>
+
+            <!-- State Column -->
+            <ng-container matColumnDef="merchantState">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>State</th>
+              <td mat-cell *matCellDef="let row" class="state-badge">{{ row.merchantState }}</td>
+            </ng-container>
+
+            <!-- Product/Fuel Type Column -->
+            <ng-container matColumnDef="fuelType">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ productLabel }}</th>
+              <td mat-cell *matCellDef="let row" class="fuel-type">{{ row.fuelType }}</td>
+            </ng-container>
+
+            <!-- Quantity Column -->
+            <ng-container matColumnDef="quantity">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ quantityLabel }}</th>
+              <td mat-cell *matCellDef="let row" class="numeric">{{ row.quantity | number: '1.1-1' }}</td>
+            </ng-container>
+
+            <!-- Amount Column -->
+            <ng-container matColumnDef="netCost">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
+              <td mat-cell *matCellDef="let row" class="numeric amount">{{ row.netCost | currency }}</td>
+            </ng-container>
+
+            <!-- Tax Paid Column -->
+            <ng-container matColumnDef="totalTaxAmount">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tax Paid</th>
+              <td mat-cell *matCellDef="let row" class="numeric tax">
+                {{ row.totalTaxAmount > 0 ? (row.totalTaxAmount | currency) : '-' }}
+              </td>
+            </ng-container>
+
+            <!-- Tax Difference Column -->
+            <ng-container matColumnDef="taxDifference">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tax Diff</th>
+              <td mat-cell *matCellDef="let row" class="numeric"
+                  [style.color]="row.taxDifference > 0 ? '#16a34a' : (row.taxDifference < 0 ? '#dc2626' : '#6b7280')"
+                  [style.font-weight]="row.taxDifference !== 0 ? '600' : 'normal'">
+                {{ row.taxDifference | currency }}
+              </td>
+            </ng-container>
+
+            <!-- Claim Type (Over/Under Payment) Column -->
+            <ng-container matColumnDef="predictedClaimType">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="claim-type-badge" [ngClass]="getClaimTypeColor(row.predictedClaimType)">
+                  {{ getClaimTypeLabel(row.predictedClaimType) }}
                 </span>
               </td>
-              <td>
-                <span class="status-badge" [ngClass]="getStatusClass(element.status || 'FLAGGED')">
-                  {{ element.status || 'FLAGGED' }}
+            </ng-container>
+
+            <!-- Anomaly Score Column -->
+            <ng-container matColumnDef="anomalyScore">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Score</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="risk-score-badge" [ngClass]="getRiskClass(row.anomalyScore)">
+                  {{ (row.anomalyScore * 100) | number:'1.0-0' }}%
                 </span>
               </td>
-              <td class="numeric recovery">
-                <span class="recovery-amount" *ngIf="element.claimAmount">
-                  ${{ element.claimAmount | number: '1.2-2' }}
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="status-badge" [ngClass]="getStatusClass(row.status || 'FLAGGED')">
+                  {{ row.status || 'FLAGGED' }}
                 </span>
-                <span class="text-muted" *ngIf="!element.claimAmount">-</span>
               </td>
-              <td>
-                <button mat-icon-button 
-                  (click)="runAgenticReview(element)" 
-                  [disabled]="isReviewing(element)"
-                  [class.reviewing]="isReviewing(element)"
-                  title="{{ isReviewing(element) ? 'AI Agent is reviewing...' : 'AI Agent Review' }}"
+            </ng-container>
+
+            <!-- Potential Recovery Column -->
+            <ng-container matColumnDef="claimAmount">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Recovery</th>
+              <td mat-cell *matCellDef="let row" class="numeric recovery">
+                <span class="recovery-amount" *ngIf="row.claimAmount">{{ row.claimAmount | currency }}</span>
+                <span class="text-muted" *ngIf="!row.claimAmount">-</span>
+              </td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let row" class="actions-cell">
+                <button mat-icon-button
+                  (click)="runAgenticReview(row); $event.stopPropagation()"
+                  [disabled]="isReviewing(row)"
+                  [class.reviewing]="isReviewing(row)"
+                  [title]="isReviewing(row) ? 'AI Agent is reviewing...' : 'AI Agent Review'"
                   class="agent-button">
-                  <mat-spinner *ngIf="isReviewing(element)" diameter="24" class="button-spinner"></mat-spinner>
-                  <mat-icon *ngIf="!isReviewing(element)">smart_toy</mat-icon>
+                  <mat-spinner *ngIf="isReviewing(row)" diameter="24" class="button-spinner"></mat-spinner>
+                  <mat-icon *ngIf="!isReviewing(row)">smart_toy</mat-icon>
                 </button>
-                <button mat-icon-button (click)="viewDetails(element)" title="View Details">
+                <button mat-icon-button (click)="viewDetails(row); $event.stopPropagation()" title="View Details">
                   <mat-icon>open_in_new</mat-icon>
                 </button>
+                <button mat-icon-button
+                  *ngIf="!row.isReviewed"
+                  (click)="approveTransaction(row); $event.stopPropagation()"
+                  title="Approve" color="primary">
+                  <mat-icon>check_circle</mat-icon>
+                </button>
+                <button mat-icon-button
+                  *ngIf="!row.isReviewed"
+                  (click)="rejectTransaction(row); $event.stopPropagation()"
+                  title="Reject" color="warn">
+                  <mat-icon>cancel</mat-icon>
+                </button>
               </td>
+            </ng-container>
+
+            <!-- Header and Row Declarations -->
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                [class.selected-row]="selection.isSelected(row)"
+                (click)="viewDetails(row)">
             </tr>
-          </tbody>
-        </table>
+          </table>
+
+          <mat-paginator [pageSizeOptions]="[15, 25, 50, 100]"
+                         [pageSize]="15"
+                         showFirstLastButtons>
+          </mat-paginator>
+        </div>
       </div>
     </div>
   </section>
 
-  <div *ngIf="selectedTransaction" class="detail-panel">
-    <app-transaction-detail 
-      [transaction]="selectedTransaction"
-      (close)="closeDetails()">
-    </app-transaction-detail>
+  <!-- Transaction Detail Slide-in Panel -->
+  <div *ngIf="selectedTransaction" class="detail-overlay" (click)="closeDetails()">
+    <div class="detail-panel" (click)="$event.stopPropagation()">
+      <div class="detail-panel-header">
+        <h4>
+          <mat-icon>receipt_long</mat-icon>
+          Transaction #{{ selectedTransaction.transactionNumber }}
+          <span class="detail-status-badge" [ngClass]="{
+            'status-pending': !selectedTransaction.isReviewed,
+            'status-reviewed': selectedTransaction.isReviewed && selectedTransaction.status === 'REVIEWED',
+            'status-approved': selectedTransaction.status === 'APPROVED',
+            'status-rejected': selectedTransaction.status === 'REJECTED',
+            'status-claimed': selectedTransaction.status === 'CLAIMED'
+          }">
+            {{ selectedTransaction.isReviewed ? (selectedTransaction.status || 'REVIEWED') : 'PENDING' }}
+          </span>
+        </h4>
+        <button mat-stroked-button (click)="closeDetails()">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+          Close
+        </button>
+      </div>
+      <div class="detail-panel-content">
+        <app-transaction-detail 
+          [transaction]="selectedTransaction"
+          (close)="closeDetails()">
+        </app-transaction-detail>
+      </div>
+    </div>
   </div>
 </div>

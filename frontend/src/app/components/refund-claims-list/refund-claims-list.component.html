@@ -2,9 +2,7 @@
   <!-- Generating Claim Overlay -->
   <div *ngIf="generating" class="alert alert-info mb-4">
     <div class="d-flex align-items-center">
-      <div class="spinner-border spinner-border-sm me-3" role="status">
-        <span class="visually-hidden">Generating...</span>
-      </div>
+      <mat-spinner diameter="20" style="margin-right: 12px;"></mat-spinner>
       <div>
         <strong>Generating Refund Claim...</strong>
         <p class="mb-0">Processing selected transactions</p>
@@ -12,13 +10,24 @@
     </div>
   </div>
 
-  <!-- Engagement/Client Info Header -->
-  <div class="engagement-label" style="margin-top: 4px; margin-bottom: 8px; font-size: 15px; color: #2563eb; display: flex; align-items: center; gap: 8px;">
-    <mat-icon style="font-size: 20px;">groups</mat-icon>
-    <span><strong>Current Engagement:</strong></span>
-    <span style="font-weight: 500;">{{ getEngagementLabel() }}</span>
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrapper">
+        <mat-icon class="header-icon">request_quote</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 class="page-title">Refund Claims</h2>
+        <p class="page-subtitle">Manage and track excise tax refund claims</p>
+        <div class="engagement-info">
+          <span class="engagement-label">{{ getEngagementLabel() }}</span>
+          <span class="record-count">{{ claims.length }} claims</span>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <div class="content-area">
   <!-- Header with Stats -->
   <div class="row mb-4">
     <div class="col-md-3">
@@ -48,377 +57,178 @@
     </div>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
+  <!-- Toolbar -->
+  <div class="claims-toolbar" *ngIf="!loading">
+    <div class="toolbar-left">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search claims</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Search by claim #, client, tax type...">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
     </div>
-    <p class="mt-2">Loading refund claims...</p>
+    <div class="toolbar-right">
+      <button mat-raised-button color="primary" (click)="createNewClaim()">
+        <mat-icon>add</mat-icon>
+        New Claim
+      </button>
+      <button mat-stroked-button (click)="refreshClaims()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading refund claims...</p>
   </div>
 
   <!-- Error State -->
   <div *ngIf="error && !loading" class="alert alert-danger" role="alert">
     <mat-icon style="vertical-align: middle; margin-right: 8px;">error</mat-icon>
     {{ error }}
-    <button class="btn btn-sm btn-outline-danger ms-3" (click)="dataGrid?.instance?.refresh()">Retry</button>
+    <button mat-stroked-button color="warn" style="margin-left: 12px;" (click)="refreshClaims()">Retry</button>
   </div>
 
   <!-- Claims Grid -->
   <div *ngIf="!loading && !error" class="grid-container">
-    <dx-data-grid
-      #claimsGrid
-      [dataSource]="claimsStore"
-      [showBorders]="true"
-      [showRowLines]="true"
-      [showColumnLines]="true"
-      [rowAlternationEnabled]="true"
-      [allowColumnReordering]="true"
-      [allowColumnResizing]="true"
-      [columnAutoWidth]="true"
-      [hoverStateEnabled]="true"
-      [remoteOperations]="false"
-      (onToolbarPreparing)="onToolbarPreparing($event)"
-      (onInitNewRow)="onInitNewRow($event)"
-      (onEditingStart)="onEditingStart($event)"
-      keyExpr="id"
-      height="calc(100vh - 420px)">
+    <div class="mat-table-container">
+      <table mat-table [dataSource]="dataSource" matSort
+             matSortActive="claimedAmount" matSortDirection="desc"
+             class="claims-mat-table">
 
-      <!-- State Storing -->
-      <dxo-state-storing
-        [enabled]="true"
-        type="localStorage"
-        storageKey="refundClaimsGrid">
-      </dxo-state-storing>
+        <!-- Claim # Column -->
+        <ng-container matColumnDef="claimNumber">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Claim #</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="claim-number-cell">
+              <strong>{{ row.claimNumber }}</strong>
+              <div class="cell-subtitle">{{ row.taxYear }} {{ row.taxQuarter }}</div>
+            </div>
+          </td>
+        </ng-container>
 
-      <!-- Editing - Popup Mode -->
-      <dxo-editing
-        mode="popup"
-        [allowAdding]="true"
-        [allowUpdating]="true"
-        [allowDeleting]="true"
-        [useIcons]="true"
-        [texts]="{ confirmDeleteMessage: 'Are you sure you want to delete this draft claim? This action cannot be undone.' }">
-        <dxo-popup
-          title="Refund Claim"
-          [showTitle]="true"
-          [width]="780"
-          [height]="580"
-          container="body">
-        </dxo-popup>
-        <dxo-form [colCount]="2">
-          <dxi-item itemType="group" caption="Claimant Information" [colCount]="2" [colSpan]="2">
-            <dxi-item dataField="ein"></dxi-item>
-            <dxi-item dataField="nameOfClaimant"></dxi-item>
-            <dxi-item dataField="claimantAddress" [colSpan]="2" editorType="dxTextArea" [editorOptions]="{ height: 60 }"></dxi-item>
-          </dxi-item>
-          <dxi-item itemType="group" caption="Contact Information" [colCount]="3" [colSpan]="2">
-            <dxi-item dataField="contactName"></dxi-item>
-            <dxi-item dataField="contactPhone"></dxi-item>
-            <dxi-item dataField="contactEmail"></dxi-item>
-          </dxi-item>
-          <dxi-item itemType="group" caption="Claim Details" [colCount]="2" [colSpan]="2">
-            <dxi-item dataField="taxType"></dxi-item>
-            <dxi-item dataField="refundType"></dxi-item>
-            <dxi-item dataField="claimedAmount"></dxi-item>
-            <dxi-item dataField="priority"></dxi-item>
-            <dxi-item dataField="taxYear"></dxi-item>
-            <dxi-item dataField="taxQuarter"></dxi-item>
-          </dxi-item>
-          <dxi-item itemType="group" caption="Notes" [colCount]="1" [colSpan]="2">
-            <dxi-item dataField="internalNotes" editorType="dxTextArea" [editorOptions]="{ height: 60 }"></dxi-item>
-          </dxi-item>
-        </dxo-form>
-      </dxo-editing>
+        <!-- Client Column -->
+        <ng-container matColumnDef="nameOfClaimant">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Client</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="client-cell">
+              <div>{{ row.nameOfClaimant || 'N/A' }}</div>
+              <div class="cell-subtitle">{{ row.ein || 'No EIN' }}</div>
+            </div>
+          </td>
+        </ng-container>
 
-      <!-- Selection -->
-      <dxo-selection mode="single"></dxo-selection>
+        <!-- Tax Type Column -->
+        <ng-container matColumnDef="taxType">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Tax Type</th>
+          <td mat-cell *matCellDef="let row">{{ row.taxType }}</td>
+        </ng-container>
 
-      <!-- Filter Row -->
-      <dxo-filter-row [visible]="true"></dxo-filter-row>
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+          <td mat-cell *matCellDef="let row">
+            <span [class]="'badge ' + getStatusBadgeClass(row.status)">
+              {{ getStatusDisplayName(row.status) }}
+            </span>
+          </td>
+        </ng-container>
 
-      <!-- Header Filter -->
-      <dxo-header-filter [visible]="true">
-        <dxo-search [enabled]="true"></dxo-search>
-      </dxo-header-filter>
+        <!-- Priority Column -->
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Priority</th>
+          <td mat-cell *matCellDef="let row">
+            <span [class]="getPriorityClass(row.priority)">
+              <mat-icon class="priority-icon">flag</mat-icon>
+              {{ getPriorityLabel(row.priority) }}
+            </span>
+          </td>
+        </ng-container>
 
-      <!-- Search Panel -->
-      <dxo-search-panel 
-        [visible]="true" 
-        [width]="240" 
-        placeholder="Search claims...">
-      </dxo-search-panel>
+        <!-- Claimed Amount Column -->
+        <ng-container matColumnDef="claimedAmount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Claimed</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="amount-cell">
+              <strong>{{ row.claimedAmount | currency }}</strong>
+              <div class="cell-subtitle">{{ row.transactionCount }} txns</div>
+            </div>
+          </td>
+        </ng-container>
 
-      <!-- Column Chooser -->
-      <dxo-column-chooser [enabled]="true" mode="select"></dxo-column-chooser>
+        <!-- Approved Amount Column -->
+        <ng-container matColumnDef="approvedAmount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Approved</th>
+          <td mat-cell *matCellDef="let row">{{ row.approvedAmount | currency }}</td>
+        </ng-container>
 
-      <!-- Export -->
-      <dxo-export [enabled]="true" [allowExportSelectedData]="false"></dxo-export>
+        <!-- Paid Amount Column -->
+        <ng-container matColumnDef="paidAmount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Paid</th>
+          <td mat-cell *matCellDef="let row">{{ row.paidAmount | currency }}</td>
+        </ng-container>
 
-      <!-- Paging -->
-      <dxo-paging [pageSize]="25"></dxo-paging>
-      <dxo-pager 
-        [showPageSizeSelector]="true" 
-        [allowedPageSizes]="[10, 25, 50, 100]" 
-        [showInfo]="true">
-      </dxo-pager>
+        <!-- Filed Date Column -->
+        <ng-container matColumnDef="submittedDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Filed Date</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.submittedDate ? (row.submittedDate | date: 'MM/dd/yyyy') : '-' }}
+          </td>
+        </ng-container>
 
-      <!-- Sorting -->
-      <dxo-sorting mode="multiple"></dxo-sorting>
+        <!-- Txn Count Column -->
+        <ng-container matColumnDef="transactionCount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Txns</th>
+          <td mat-cell *matCellDef="let row">{{ row.transactionCount }}</td>
+        </ng-container>
 
-      <!-- Columns -->
-      <dxi-column
-        dataField="claimNumber"
-        caption="Claim #"
-        [width]="160"
-        [fixed]="true"
-        [allowEditing]="false"
-        cellTemplate="claimNumberCell">
-      </dxi-column>
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let row" class="actions-cell">
+            <button mat-icon-button (click)="viewClaim(row); $event.stopPropagation()" title="View Details">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button
+              *ngIf="row.status === ClaimStatus.Draft || row.status === ClaimStatus.ReadyToFile"
+              (click)="editClaim(row); $event.stopPropagation()" title="Edit Claim">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button
+              *ngIf="row.status !== ClaimStatus.Draft"
+              (click)="generateForm(row); $event.stopPropagation()" title="Generate Form 8849" color="primary">
+              <mat-icon>picture_as_pdf</mat-icon>
+            </button>
+            <button mat-icon-button
+              *ngIf="row.status === ClaimStatus.Draft"
+              (click)="deleteClaim(row); $event.stopPropagation()" title="Delete Draft" color="warn">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
 
-      <dxi-column
-        dataField="ein"
-        caption="EIN"
-        [width]="140"
-        [visible]="false">
-        <dxi-validation-rule type="required" message="EIN is required"></dxi-validation-rule>
-      </dxi-column>
+        <!-- Header and Row Declarations -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            (click)="viewClaim(row)" class="clickable-row">
+        </tr>
+      </table>
 
-      <dxi-column
-        dataField="nameOfClaimant"
-        caption="Client"
-        [width]="200"
-        cellTemplate="clientCell">
-        <dxi-validation-rule type="required" message="Claimant name is required"></dxi-validation-rule>
-      </dxi-column>
+      <mat-paginator [pageSizeOptions]="[15, 25, 50, 100]"
+                     [pageSize]="15"
+                     showFirstLastButtons>
+      </mat-paginator>
+    </div>
 
-      <dxi-column
-        dataField="claimantAddress"
-        caption="Address"
-        [width]="200"
-        [visible]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="contactName"
-        caption="Contact"
-        [width]="150"
-        [visible]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="contactPhone"
-        caption="Phone"
-        [width]="130"
-        [visible]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="contactEmail"
-        caption="Email"
-        [width]="180"
-        [visible]="false">
-        <dxi-validation-rule type="email" message="Invalid email address"></dxi-validation-rule>
-      </dxi-column>
-
-      <dxi-column
-        dataField="taxType"
-        caption="Tax Type"
-        [width]="150">
-        <dxo-lookup
-          [dataSource]="taxTypes"
-          valueExpr="value"
-          displayExpr="text">
-        </dxo-lookup>
-      </dxi-column>
-
-      <dxi-column
-        dataField="refundType"
-        caption="Refund Type"
-        [width]="140"
-        [visible]="false">
-        <dxo-lookup
-          [dataSource]="refundTypes"
-          valueExpr="value"
-          displayExpr="text">
-        </dxo-lookup>
-      </dxi-column>
-
-      <dxi-column
-        dataField="status"
-        caption="Status"
-        [width]="140"
-        [allowEditing]="false"
-        cellTemplate="statusCell">
-        <dxo-header-filter [dataSource]="statusFilterData"></dxo-header-filter>
-      </dxi-column>
-
-      <dxi-column
-        dataField="priority"
-        caption="Priority"
-        [width]="120"
-        cellTemplate="priorityCell">
-        <dxo-lookup
-          [dataSource]="priorityOptions"
-          valueExpr="value"
-          displayExpr="text">
-        </dxo-lookup>
-      </dxi-column>
-
-      <dxi-column
-        dataField="claimedAmount"
-        caption="Claimed Amount"
-        dataType="number"
-        format="currency"
-        [width]="150"
-        cellTemplate="claimedAmountCell">
-        <dxi-validation-rule type="range" [min]="0" message="Amount must be positive"></dxi-validation-rule>
-      </dxi-column>
-
-      <dxi-column
-        dataField="approvedAmount"
-        caption="Approved"
-        dataType="number"
-        format="currency"
-        [width]="130"
-        [allowEditing]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="paidAmount"
-        caption="Paid"
-        dataType="number"
-        format="currency"
-        [width]="130"
-        [allowEditing]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="submittedDate"
-        caption="Filed Date"
-        dataType="date"
-        format="MM/dd/yyyy"
-        [width]="120"
-        [allowEditing]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="taxYear"
-        caption="Tax Year"
-        dataType="number"
-        [width]="100">
-        <dxi-validation-rule type="range" [min]="2020" [max]="2030" message="Enter a valid tax year"></dxi-validation-rule>
-      </dxi-column>
-
-      <dxi-column
-        dataField="taxQuarter"
-        caption="Tax Quarter"
-        [width]="120">
-        <dxo-lookup
-          [dataSource]="quarterOptions"
-          valueExpr="value"
-          displayExpr="text">
-        </dxo-lookup>
-      </dxi-column>
-
-      <dxi-column
-        dataField="transactionCount"
-        caption="Txn Count"
-        dataType="number"
-        [width]="110"
-        [allowEditing]="false">
-      </dxi-column>
-
-      <dxi-column
-        dataField="internalNotes"
-        caption="Notes"
-        [width]="200"
-        [visible]="false">
-      </dxi-column>
-
-      <dxi-column
-        type="buttons"
-        caption="Actions"
-        [width]="160"
-        [fixed]="true"
-        fixedPosition="right">
-        <dxi-button name="edit" hint="Edit Claim"></dxi-button>
-        <dxi-button name="delete" hint="Delete Draft" [visible]="isDeleteVisible"></dxi-button>
-        <dxi-button
-          icon="exportpdf"
-          hint="Generate Form 8849"
-          [onClick]="onGenerateFormClick"
-          [visible]="isGenerateFormVisible">
-        </dxi-button>
-        <dxi-button
-          icon="search"
-          hint="View Details"
-          [onClick]="onViewClick">
-        </dxi-button>
-      </dxi-column>
-
-      <!-- Summary -->
-      <dxo-summary>
-        <dxi-total-item
-          column="claimNumber"
-          summaryType="count"
-          displayFormat="Total: {0} claims">
-        </dxi-total-item>
-        <dxi-total-item
-          column="claimedAmount"
-          summaryType="sum"
-          valueFormat="currency"
-          displayFormat="Total Claimed: {0}">
-        </dxi-total-item>
-        <dxi-total-item
-          column="approvedAmount"
-          summaryType="sum"
-          valueFormat="currency"
-          displayFormat="Total Approved: {0}">
-        </dxi-total-item>
-        <dxi-total-item
-          column="paidAmount"
-          summaryType="sum"
-          valueFormat="currency"
-          displayFormat="Total Paid: {0}">
-        </dxi-total-item>
-      </dxo-summary>
-
-      <!-- Cell Templates -->
-      <div *dxTemplate="let data of 'claimNumberCell'">
-        <div class="claim-number-cell">
-          <strong>{{ data.value }}</strong>
-          <div class="cell-subtitle">{{ data.data.taxYear }} {{ data.data.taxQuarter }}</div>
-        </div>
-      </div>
-
-      <div *dxTemplate="let data of 'clientCell'">
-        <div class="client-cell">
-          <div>{{ data.value || 'N/A' }}</div>
-          <div class="cell-subtitle">{{ data.data.ein || 'No EIN' }}</div>
-        </div>
-      </div>
-
-      <div *dxTemplate="let data of 'statusCell'">
-        <span [class]="'badge ' + getStatusBadgeClass(data.value)">
-          {{ getStatusDisplayName(data.value) }}
-        </span>
-      </div>
-
-      <div *dxTemplate="let data of 'priorityCell'">
-        <span [class]="getPriorityClass(data.value)">
-          <mat-icon class="priority-icon">flag</mat-icon>
-          {{ getPriorityLabel(data.value) }}
-        </span>
-      </div>
-
-      <div *dxTemplate="let data of 'claimedAmountCell'">
-        <div class="amount-cell">
-          <strong>{{ data.value | currency }}</strong>
-          <div class="cell-subtitle">{{ data.data.transactionCount }} txns</div>
-        </div>
-      </div>
-
-    </dx-data-grid>
+    <!-- Summary Footer -->
+    <div class="claims-summary-bar" *ngIf="claims.length > 0">
+      <span><strong>{{ claims.length }}</strong> claims</span>
+      <span>Total Claimed: <strong>{{ totalClaimedAmount | currency }}</strong></span>
+      <span>Approved: <strong>{{ totalApprovedAmount | currency }}</strong></span>
+      <span>Paid: <strong>{{ totalPaidAmount | currency }}</strong></span>
+    </div>
 
     <!-- Empty State -->
     <div *ngIf="claims.length === 0 && !loading" class="empty-state">
@@ -434,12 +244,20 @@
       <div class="panel-header">
         <h4>
           <mat-icon>description</mat-icon>
-          Claim {{ selectedClaim.claimNumber }}
-          <span [class]="'badge ' + getStatusBadgeClass(selectedClaim.status)" style="margin-left: 12px;">
+          Refund Claim Details
+          <span class="badge" [ngClass]="{
+            'badge-draft': selectedClaim.status === ClaimStatus.Draft,
+            'badge-readytofile': selectedClaim.status === ClaimStatus.ReadyToFile,
+            'badge-submitted': selectedClaim.status === ClaimStatus.Submitted,
+            'badge-underreview': selectedClaim.status === ClaimStatus.UnderReview,
+            'badge-approved': selectedClaim.status === ClaimStatus.Approved,
+            'badge-paid': selectedClaim.status === ClaimStatus.Paid,
+            'badge-rejected': selectedClaim.status === ClaimStatus.Rejected
+          }">
             {{ getStatusDisplayName(selectedClaim.status) }}
           </span>
         </h4>
-        <button class="btn btn-sm btn-outline-secondary" (click)="closeClaimDetail()">
+        <button mat-stroked-button (click)="closeClaimDetail()">
           <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
           Close
         </button>
@@ -448,5 +266,6 @@
         <app-claim-filing-form [claimId]="selectedClaim.id" (onClose)="closeClaimDetail()"></app-claim-filing-form>
       </div>
     </div>
+  </div>
   </div>
 </div>

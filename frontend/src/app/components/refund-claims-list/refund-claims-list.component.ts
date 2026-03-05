@@ -1,10 +1,13 @@
 import { Component, OnInit, Input, SimpleChanges, OnChanges, HostListener, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { DxDataGridComponent } from 'devextreme-angular';
-import CustomStore from 'devextreme/data/custom_store';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatDialog } from '@angular/material/dialog';
 import { RefundClaimService } from '../../services/refund-claim.service';
 import { TaxClientService } from '../../services/tax-client.service';
 import { ToastService } from '../../services/toast.service';
+import { NewClaimDialogComponent } from '../new-claim-dialog/new-claim-dialog.component';
 import { 
   RefundClaim, 
   ClaimStatus,
@@ -17,7 +20,6 @@ import {
   getPriorityLabel,
   getPriorityClass
 } from '../../models/refund-claim.model';
-import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-refund-claims-list',
@@ -26,10 +28,21 @@ import { lastValueFrom } from 'rxjs';
 })
 export class RefundClaimsListComponent implements OnInit, OnChanges {
   @Input() engagementId?: number;
-  @ViewChild('claimsGrid', { static: false }) dataGrid!: DxDataGridComponent;
-  
+  @ViewChild(MatSort) set matSort(sort: MatSort) {
+    if (sort) { this.dataSource.sort = sort; }
+  }
+  @ViewChild(MatPaginator) set matPaginator(paginator: MatPaginator) {
+    if (paginator) { this.dataSource.paginator = paginator; }
+  }
+
+  dataSource = new MatTableDataSource<RefundClaim>([]);
+  displayedColumns: string[] = [
+    'claimNumber', 'nameOfClaimant', 'taxType', 'status', 'priority',
+    'claimedAmount', 'approvedAmount', 'paidAmount', 'submittedDate',
+    'transactionCount', 'actions'
+  ];
+
   claims: RefundClaim[] = [];
-  claimsStore!: CustomStore;
   loading = false;
   generating = false;
   error: string | null = null;
@@ -45,7 +58,7 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
   
   ClaimStatus = ClaimStatus;
 
-  // DevExtreme Lookup Data
+  // DevExtreme Lookup Data (kept for reference display)
   statusFilterData = [
     { text: 'Draft', value: ClaimStatus.Draft },
     { text: 'Ready to File', value: ClaimStatus.ReadyToFile },
@@ -88,25 +101,13 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
     { value: 'Q4', text: 'Q4 (Oct-Dec)' }
   ];
 
-  // Button click handlers (arrow functions for DevExtreme)
-  onViewClick = (e: any) => {
-    e.event?.stopPropagation();
-    this.viewClaim(e.row.data);
-  };
-
-  onGenerateFormClick = (e: any) => {
-    e.event?.stopPropagation();
-    this.generateForm(e.row.data);
-  };
-
-  // Button visibility handlers
-  isGenerateFormVisible = (e: any) => {
-    return e.row.data.status !== ClaimStatus.Draft;
-  };
-
-  isDeleteVisible = (e: any) => {
-    return e.row.data.status === ClaimStatus.Draft;
-  };
+  constructor(
+    private refundClaimService: RefundClaimService,
+    private taxClientService: TaxClientService,
+    private toastService: ToastService,
+    private router: Router,
+    private dialog: MatDialog
+  ) {}
 
   // Keyboard support - ESC to close panel
   @HostListener('document:keydown.escape', ['$event'])
@@ -116,163 +117,8 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
     }
   }
 
-  constructor(
-    private refundClaimService: RefundClaimService,
-    private taxClientService: TaxClientService,
-    private toastService: ToastService,
-    private router: Router
-  ) {
-    this.initCustomStore();
-  }
-
-  // Initialize CustomStore for DevExtreme CRUD
-  initCustomStore(): void {
-    this.claimsStore = new CustomStore({
-      key: 'id',
-
-      load: () => {
-        return lastValueFrom(this.refundClaimService.getClaims(this.engagementId))
-          .then((claims) => {
-            this.claims = claims;
-            this.calculateStats();
-            return claims;
-          })
-          .catch((error) => {
-            console.error('Error loading claims:', error);
-            this.toastService.error('Failed to load refund claims');
-            throw error;
-          });
-      },
-
-      insert: (values: any) => {
-        const engagement = this.taxClientService.getSelectedEngagement();
-        if (!engagement) {
-          this.toastService.warning('No engagement selected. Please select an engagement first.');
-          return Promise.reject('No engagement selected');
-        }
-
-        const request: CreateClaimRequest = {
-          engagementId: engagement.id,
-          ein: values.ein,
-          nameOfClaimant: values.nameOfClaimant,
-          claimantAddress: values.claimantAddress,
-          contactName: values.contactName,
-          contactPhone: values.contactPhone,
-          contactEmail: values.contactEmail,
-          taxType: values.taxType,
-          refundType: values.refundType,
-          claimedAmount: values.claimedAmount,
-          taxYear: values.taxYear,
-          taxQuarter: values.taxQuarter,
-          justification: values.justification,
-          internalNotes: values.internalNotes,
-          priority: values.priority
-        };
-
-        return lastValueFrom(this.refundClaimService.createClaim(request))
-          .then((claim) => {
-            this.toastService.success(`Claim ${claim.claimNumber} created successfully`);
-            this.calculateStats();
-            return claim;
-          })
-          .catch((error) => {
-            console.error('Error creating claim:', error);
-            this.toastService.error('Failed to create claim: ' + (error.error?.error || error.message));
-            throw error;
-          });
-      },
-
-      update: (key: number, values: any) => {
-        const request: UpdateClaimRequest = {};
-        // Only send changed fields
-        if (values.ein !== undefined) request.ein = values.ein;
-        if (values.nameOfClaimant !== undefined) request.nameOfClaimant = values.nameOfClaimant;
-        if (values.claimantAddress !== undefined) request.claimantAddress = values.claimantAddress;
-        if (values.contactName !== undefined) request.contactName = values.contactName;
-        if (values.contactPhone !== undefined) request.contactPhone = values.contactPhone;
-        if (values.contactEmail !== undefined) request.contactEmail = values.contactEmail;
-        if (values.internalNotes !== undefined) request.internalNotes = values.internalNotes;
-        if (values.priority !== undefined) request.priority = values.priority;
-
-        return lastValueFrom(this.refundClaimService.updateClaim(key, request))
-          .then((claim) => {
-            this.toastService.success(`Claim ${claim.claimNumber} updated successfully`);
-            this.calculateStats();
-            return claim;
-          })
-          .catch((error) => {
-            console.error('Error updating claim:', error);
-            this.toastService.error('Failed to update claim: ' + (error.error?.error || error.message));
-            throw error;
-          });
-      },
-
-      remove: (key: number) => {
-        return lastValueFrom(this.refundClaimService.deleteClaim(key))
-          .then(() => {
-            this.toastService.success('Claim deleted successfully');
-            this.calculateStats();
-          })
-          .catch((error) => {
-            console.error('Error deleting claim:', error);
-            this.toastService.error('Failed to delete claim: ' + (error.error?.error || error.message));
-            throw error;
-          });
-      }
-    });
-  }
-
-  // DevExtreme Grid Events
-  onToolbarPreparing(e: any): void {
-    e.toolbarOptions.items.unshift(
-      {
-        location: 'after',
-        widget: 'dxButton',
-        options: {
-          icon: 'refresh',
-          hint: 'Refresh',
-          onClick: () => {
-            if (this.dataGrid?.instance) {
-              this.dataGrid.instance.refresh();
-            }
-          }
-        }
-      }
-    );
-  }
-
-  onInitNewRow(e: any): void {
-    // Pre-fill defaults for new claim
-    const engagement = this.taxClientService.getSelectedEngagement();
-    const client = this.taxClientService.getSelectedClient();
-
-    e.data.taxType = 'Fuel Excise Tax';
-    e.data.refundType = 'Overpayment';
-    e.data.priority = 3;
-    e.data.taxYear = new Date().getFullYear();
-    e.data.taxQuarter = this.getCurrentQuarter();
-    e.data.claimedAmount = 0;
-
-    // Pre-fill from selected client/engagement
-    if (client) {
-      e.data.ein = client.ein || '';
-      e.data.nameOfClaimant = client.name || '';
-      e.data.claimantAddress = client.address || '';
-      e.data.contactName = client.contactPerson || '';
-      e.data.contactPhone = client.contactPhone || '';
-      e.data.contactEmail = client.contactEmail || '';
-    }
-  }
-
-  onEditingStart(e: any): void {
-    // Prevent editing non-Draft claims
-    if (e.data.status !== ClaimStatus.Draft && e.data.status !== ClaimStatus.ReadyToFile) {
-      e.cancel = true;
-      this.toastService.warning(`Cannot edit claim in "${e.data.status}" status. Only Draft and Ready to File claims can be edited.`);
-    }
-  }
-
   ngOnInit() {
+    this.loadClaims();
     // Check for pending transaction IDs from service
     const pendingIds = this.taxClientService.getPendingRefundTransactionIds();
     if (pendingIds && pendingIds.length > 0) {
@@ -285,10 +131,86 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['engagementId'] && !changes['engagementId'].firstChange) {
-      if (this.dataGrid?.instance) {
-        this.dataGrid.instance.refresh();
-      }
+      this.loadClaims();
     }
+  }
+
+  loadClaims(): void {
+    this.loading = true;
+    this.error = null;
+    const effectiveEngagementId = this.engagementId || this.taxClientService.getSelectedEngagement()?.id;
+    this.refundClaimService.getClaims(effectiveEngagementId).subscribe({
+      next: (claims) => {
+        this.claims = claims;
+        this.dataSource.data = claims;
+        this.calculateStats();
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error loading claims:', err);
+        this.error = 'Failed to load refund claims';
+        this.toastService.error(this.error);
+        this.loading = false;
+      }
+    });
+  }
+
+  refreshClaims(): void {
+    this.loadClaims();
+  }
+
+  applyFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSource.filter = filterValue.trim().toLowerCase();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
+  }
+
+  createNewClaim(): void {
+    const engagement = this.taxClientService.getSelectedEngagement();
+    if (!engagement) {
+      this.toastService.warning('Please select an engagement first');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(NewClaimDialogComponent, {
+      width: '680px',
+      maxHeight: '90vh',
+      disableClose: true,
+      data: { engagementId: engagement.id }
+    });
+
+    dialogRef.afterClosed().subscribe((result: RefundClaim | null) => {
+      if (result) {
+        this.loadClaims();
+      }
+    });
+  }
+
+  editClaim(claim: RefundClaim): void {
+    this.selectedClaim = claim;
+    this.showClaimDetail = true;
+  }
+
+  deleteClaim(claim: RefundClaim): void {
+    if (claim.status !== ClaimStatus.Draft) {
+      this.toastService.warning('Only Draft claims can be deleted');
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this draft claim? This action cannot be undone.')) {
+      return;
+    }
+    this.refundClaimService.deleteClaim(claim.id).subscribe({
+      next: () => {
+        this.toastService.success('Claim deleted successfully');
+        this.loadClaims();
+      },
+      error: (err) => {
+        console.error('Error deleting claim:', err);
+        this.toastService.error('Failed to delete claim: ' + (err.error?.error || err.message));
+      }
+    });
   }
 
   generateClaimFromPendingTransactions(transactionIds: number[]): void {
@@ -308,9 +230,7 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
       next: (claim) => {
         this.generating = false;
         this.toastService.success(`Refund claim ${claim.claimNumber} generated successfully!`);
-        if (this.dataGrid?.instance) {
-          this.dataGrid.instance.refresh();
-        }
+        this.loadClaims();
       },
       error: (error) => {
         console.error('Error generating claim:', error);
@@ -335,9 +255,7 @@ export class RefundClaimsListComponent implements OnInit, OnChanges {
     this.selectedClaim = null;
     this.showClaimDetail = false;
     // Refresh grid in case claim was updated in the detail panel
-    if (this.dataGrid?.instance) {
-      this.dataGrid.instance.refresh();
-    }
+    this.loadClaims();
   }
 
   generateForm(claim: RefundClaim): void {

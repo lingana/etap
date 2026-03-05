@@ -4,7 +4,8 @@ namespace ExciseTaxAudit.API.Models
     {
         Auditor,
         Manager,
-        Admin
+        Admin,
+        Viewer
     }
 
     public class User

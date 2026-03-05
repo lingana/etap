@@ -55,6 +55,26 @@ const routes: Routes = [
       {
         path: 'recovery',
         loadChildren: () => import('./modules/recovery/recovery.module').then(m => m.RecoveryModule)
+      },
+      {
+        path: 'deadlines',
+        loadChildren: () => import('./modules/filing-deadlines/filing-deadlines.module').then(m => m.FilingDeadlinesModule)
+      },
+      {
+        path: 'report',
+        loadChildren: () => import('./modules/engagement-report/engagement-report.module').then(m => m.EngagementReportModule)
+      },
+      {
+        path: 'duplicates',
+        loadChildren: () => import('./modules/duplicate-detection/duplicate-detection.module').then(m => m.DuplicateDetectionModule)
+      },
+      {
+        path: 'team',
+        loadChildren: () => import('./modules/user-management/user-management.module').then(m => m.UserManagementModule)
+      },
+      {
+        path: 'portfolio',
+        loadChildren: () => import('./modules/portfolio/portfolio.module').then(m => m.PortfolioModule)
       }
     ]
   },

@@ -41,12 +41,17 @@ public class AuditTrailController : ControllerBase
     }
 
     /// <summary>
-    /// Get recent activity across all engagements.
+    /// Get recent activity, optionally filtered by engagement.
+    /// Accepts both 'maxRecords' and 'limit' as param names for flexibility.
     /// </summary>
     [HttpGet("recent")]
-    public async Task<ActionResult<List<AuditLog>>> GetRecentActivity([FromQuery] int maxRecords = 50)
+    public async Task<ActionResult<List<AuditLog>>> GetRecentActivity(
+        [FromQuery] int? engagementId = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] int? maxRecords = null)
     {
-        var logs = await _auditTrail.GetRecentActivityAsync(maxRecords);
+        var count = limit ?? maxRecords ?? 50;
+        var logs = await _auditTrail.GetRecentActivityAsync(count, engagementId);
         return Ok(logs);
     }
 

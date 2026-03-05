@@ -14,8 +14,11 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule } from '@angular/material/dialog';
-import { DxDataGridModule, DxPopupModule } from 'devextreme-angular';
+import { MatSortModule } from '@angular/material/sort';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { RefundClaimsListComponent } from '../../components/refund-claims-list/refund-claims-list.component';
 import { ClaimFilingFormComponent } from '../../components/claim-filing-form/claim-filing-form.component';
@@ -58,9 +61,11 @@ const routes: Routes = [
     MatStepperModule,
     MatChipsModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     MatDialogModule,
-    DxDataGridModule,
-    DxPopupModule,
+    MatSortModule,
+    MatPaginatorModule,
+    MatTooltipModule,
     EmptyStateComponent
   ]
 })

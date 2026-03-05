@@ -8,12 +8,13 @@ import {
   CreateClientRequest,
   CreateEngagementRequest
 } from '../models/tax-client.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TaxClientService {
-  private apiUrl = 'http://localhost:5000/api/taxclient';
+  private apiUrl = `${environment.apiUrl}/taxclient`;
 
   // Context subjects
   private selectedTaxTypeSubject = new BehaviorSubject<TaxType | null>(null);

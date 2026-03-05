@@ -9,16 +9,35 @@ import { ToastService, Toast } from '../../services/toast.service';
 export class ToastComponent implements OnInit {
   toasts: Toast[] = [];
   dismissingIds = new Set<string>();
+  private readonly MAX_VISIBLE = 5;
 
   constructor(private toastService: ToastService) { }
 
   ngOnInit(): void {
     this.toastService.toasts.subscribe((toast) => {
+      // Deduplicate: skip if identical message already visible
+      const isDuplicate = this.toasts.some(
+        t => t.message === toast.message && t.type === toast.type && !this.dismissingIds.has(t.id)
+      );
+      if (isDuplicate) return;
+
       this.toasts.push(toast);
-      if (toast.duration) {
+
+      // Enforce max visible — dismiss oldest if over limit
+      const visibleToasts = this.toasts.filter(t => !this.dismissingIds.has(t.id));
+      if (visibleToasts.length > this.MAX_VISIBLE) {
+        const oldest = visibleToasts[0];
+        this.dismissToast(oldest.id);
+      }
+
+      // Auto-dismiss: errors get 8s, others use their configured duration
+      const duration = toast.duration != null && toast.duration > 0
+        ? toast.duration
+        : (toast.type === 'error' ? 8000 : 0);
+      if (duration > 0) {
         setTimeout(() => {
           this.dismissToast(toast.id);
-        }, toast.duration);
+        }, duration);
       }
     });
   }

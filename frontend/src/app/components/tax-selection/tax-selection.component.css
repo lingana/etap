@@ -533,6 +533,16 @@ button {
   font-weight: 600;
 }
 
+.status-active {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.status-pending {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 .create-button {
   display: flex;
   align-items: center;

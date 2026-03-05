@@ -40,17 +40,19 @@
 }
 /* Ensure the detail panel and its content are always scrollable */
 
+:host {
+  display: block;
+}
+
 .detail-container {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  flex: 1 1 auto;
-  padding: 20px;
-  max-width: 600px;
-  margin: 0 auto;
-  background: var(--bg-primary);
-  border-radius: 10px;
-  box-shadow: var(--shadow-md);
+  padding: 24px;
+  width: 100%;
+  max-width: 100%;
+  background: var(--bg-secondary, #f8f9fb);
+  border-radius: 0;
+  box-shadow: none;
   outline: none;
 }
 
@@ -58,15 +60,9 @@ form {
   margin-top: 15px;
 }
 
-.detail-header {
+.detail-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid var(--gray-200);
-  padding-bottom: 16px;
-  margin-bottom: 24px;
-  transition: all 0.3s ease;
-  gap: 8px;
+  flex-direction: column;
 }
 
 @media (max-width: 900px) {
@@ -111,26 +107,7 @@ form {
   }
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--text-tertiary);
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
+/* Section styling */
 .section {
   margin-bottom: 28px;
   padding-bottom: 20px;

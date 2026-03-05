@@ -1,0 +1,226 @@
+<div class="filing-deadlines-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrapper">
+        <mat-icon class="header-icon">schedule</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 class="page-title">Filing Deadlines</h2>
+        <p class="page-subtitle">Track statute of limitations and ensure timely IRS Form 8849 filings</p>
+        <div class="engagement-info">
+          <span class="record-count">{{ allDeadlines.length }} deadlines tracked</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button mat-stroked-button class="refresh-btn" (click)="loadDeadlines()" [disabled]="isLoading">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading deadline data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="loadError && !isLoading">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ loadError }}</p>
+      <button mat-raised-button color="primary" (click)="loadDeadlines()">Retry</button>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!isLoading && !loadError">
+
+      <!-- Urgency Summary Cards -->
+      <div class="urgency-cards">
+        <div class="urgency-card expired" (click)="toggleGroup('expired')" [class.active]="expandedGroups['expired']"
+             role="button" [attr.aria-expanded]="expandedGroups['expired']" aria-label="Toggle expired claims">
+          <div class="card-icon">
+            <mat-icon>cancel</mat-icon>
+          </div>
+          <div class="card-info">
+            <span class="card-count">{{ urgencyCounts.expired }}</span>
+            <span class="card-label">Expired</span>
+          </div>
+        </div>
+        <div class="urgency-card critical" (click)="toggleGroup('critical')" [class.active]="expandedGroups['critical']"
+             role="button" [attr.aria-expanded]="expandedGroups['critical']" aria-label="Toggle critical claims">
+          <div class="card-icon">
+            <mat-icon>error</mat-icon>
+          </div>
+          <div class="card-info">
+            <span class="card-count">{{ urgencyCounts.critical }}</span>
+            <span class="card-label">&lt; 90 Days</span>
+          </div>
+        </div>
+        <div class="urgency-card warning" (click)="toggleGroup('warning')" [class.active]="expandedGroups['warning']"
+             role="button" [attr.aria-expanded]="expandedGroups['warning']" aria-label="Toggle warning claims">
+          <div class="card-icon">
+            <mat-icon>warning</mat-icon>
+          </div>
+          <div class="card-info">
+            <span class="card-count">{{ urgencyCounts.warning }}</span>
+            <span class="card-label">&lt; 180 Days</span>
+          </div>
+        </div>
+        <div class="urgency-card normal" (click)="toggleGroup('normal')" [class.active]="expandedGroups['normal']"
+             role="button" [attr.aria-expanded]="expandedGroups['normal']" aria-label="Toggle on-track claims">
+          <div class="card-icon">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="card-info">
+            <span class="card-count">{{ urgencyCounts.normal }}</span>
+            <span class="card-label">On Track</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- At-Risk Banner -->
+      <div class="at-risk-banner" *ngIf="urgencyCounts.expired + urgencyCounts.critical > 0" role="alert">
+        <mat-icon>priority_high</mat-icon>
+        <span>
+          <strong>{{ urgencyCounts.expired + urgencyCounts.critical }}</strong> claims at risk —
+          <strong>{{ getTotalAtRisk() | currency:'USD':'symbol':'1.0-0' }}</strong> in potential recovery may be lost
+        </span>
+      </div>
+
+      <!-- Expand / Collapse Controls -->
+      <div class="expand-controls">
+        <button mat-button (click)="expandAll()">
+          <mat-icon>unfold_more</mat-icon> Expand All
+        </button>
+        <button mat-button (click)="collapseAll()">
+          <mat-icon>unfold_less</mat-icon> Collapse All
+        </button>
+      </div>
+
+      <!-- Grouped Table -->
+      <section class="grid-container" *ngIf="urgencyGroups.length > 0" aria-label="Filing deadlines table">
+
+        <!-- Shared Column Header -->
+        <div class="shared-table-header">
+          <div class="th col-claim">Claim #</div>
+          <div class="th col-status">Status</div>
+          <div class="th col-period">Tax Period</div>
+          <div class="th col-amount">Claimed</div>
+          <div class="th col-deadline">Filing Deadline</div>
+          <div class="th col-days">Days Left</div>
+          <div class="th col-actions"></div>
+        </div>
+
+        <!-- Group Sections -->
+        <div *ngFor="let group of urgencyGroups; let first = first" class="urgency-section">
+
+          <!-- Group Header -->
+          <div class="group-header" [ngClass]="'group-' + group.key"
+               (click)="toggleGroup(group.key)"
+               role="button" tabindex="0"
+               (keydown.enter)="toggleGroup(group.key)"
+               (keydown.space)="toggleGroup(group.key); $event.preventDefault()"
+               [attr.aria-expanded]="expandedGroups[group.key]"
+               [attr.aria-label]="group.label + ' — ' + group.count + ' claims'">
+            <mat-icon class="group-chevron" [class.expanded]="expandedGroups[group.key]">chevron_right</mat-icon>
+            <mat-icon class="group-urgency-icon">{{ group.icon }}</mat-icon>
+            <span class="group-label">{{ group.label }}</span>
+            <span class="group-count">{{ group.count }} claim{{ group.count !== 1 ? 's' : '' }}</span>
+            <span class="group-total">{{ group.total | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+
+          <!-- Group Data Table (simple, single row type, no `when` predicate) -->
+          <div class="group-table-wrap" *ngIf="expandedGroups[group.key]">
+            <table mat-table [dataSource]="group.items" class="deadline-table">
+
+              <!-- Claim Number Column -->
+              <ng-container matColumnDef="claimNumber">
+                <td mat-cell *matCellDef="let item">
+                  <div class="claim-number-cell">
+                    <a class="claim-link" (click)="goToClaim(item); $event.stopPropagation()">{{ item.claim.claimNumber }}</a>
+                    <span class="cell-subtitle">{{ item.claim.taxYear }} {{ item.claim.taxQuarter }}</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Status Column -->
+              <ng-container matColumnDef="status">
+                <td mat-cell *matCellDef="let item">
+                  <span class="status-chip" [ngClass]="'status-' + item.claim.status.toLowerCase()">
+                    {{ getStatusDisplay(item.claim.status) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <!-- Tax Period Column -->
+              <ng-container matColumnDef="taxPeriod">
+                <td mat-cell *matCellDef="let item">
+                  {{ item.claim.taxPeriodStart | date:'MMM yyyy' }} – {{ item.claim.taxPeriodEnd | date:'MMM yyyy' }}
+                </td>
+              </ng-container>
+
+              <!-- Claimed Amount Column -->
+              <ng-container matColumnDef="claimedAmount">
+                <td mat-cell *matCellDef="let item" class="text-right">
+                  <strong>{{ item.claim.claimedAmount | currency:'USD':'symbol':'1.2-2' }}</strong>
+                </td>
+              </ng-container>
+
+              <!-- Filing Deadline Column -->
+              <ng-container matColumnDef="filingDeadline">
+                <td mat-cell *matCellDef="let item">
+                  <span [ngClass]="'text-' + item.urgency">
+                    {{ item.filingDeadline | date:'MMM d, yyyy' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <!-- Days Remaining Column -->
+              <ng-container matColumnDef="daysRemaining">
+                <td mat-cell *matCellDef="let item">
+                  <span class="days-badge" [ngClass]="'days-' + item.urgency">
+                    {{ item.daysRemaining > 0 ? item.daysRemaining + ' days' : 'Expired' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <td mat-cell *matCellDef="let item">
+                  <button mat-stroked-button class="view-btn" (click)="goToClaim(item); $event.stopPropagation()">
+                    View <mat-icon class="view-btn-icon">arrow_forward</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <!-- Single simple row definition — no `when` predicate -->
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                  (click)="goToClaim(row)"
+                  class="data-row">
+              </tr>
+
+            </table>
+          </div>
+        </div>
+
+        <!-- Summary Bar -->
+        <div class="summary-bar" *ngIf="allDeadlines.length > 0">
+          <span><strong>{{ allDeadlines.length }}</strong> deadlines</span>
+          <span>Total Claimed: <strong>{{ getTotalClaimed() | currency:'USD':'symbol':'1.0-0' }}</strong></span>
+          <span>At Risk: <strong class="at-risk-amount">{{ getTotalAtRisk() | currency:'USD':'symbol':'1.0-0' }}</strong></span>
+        </div>
+      </section>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="allDeadlines.length === 0">
+        <mat-icon>event_available</mat-icon>
+        <h3>No claims found</h3>
+        <p>No refund claims have been created yet.</p>
+      </div>
+    </div>
+  </div>
+</div>

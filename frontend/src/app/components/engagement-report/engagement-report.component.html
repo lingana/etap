@@ -1,0 +1,239 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div class="header-content">
+    <div class="header-text">
+      <h1>
+        <mat-icon class="header-icon">summarize</mat-icon>
+        Engagement Report
+      </h1>
+      <p class="header-subtitle">Client-ready audit engagement summary with key metrics and recovery analysis</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-white" (click)="printReport()" [disabled]="isLoading">
+        <mat-icon>print</mat-icon>
+        Print
+      </button>
+      <button mat-raised-button color="primary" (click)="exportReport()" [disabled]="isLoading || isGenerating">
+        <mat-icon>download</mat-icon>
+        Export HTML
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-container" *ngIf="isLoading">
+  <mat-spinner diameter="40"></mat-spinner>
+  <p>Generating engagement report...</p>
+</div>
+
+<!-- Error State -->
+<div class="error-container" *ngIf="loadError && !isLoading">
+  <mat-icon>error_outline</mat-icon>
+  <p>{{ loadError }}</p>
+  <button mat-raised-button color="primary" (click)="loadReportData()">Retry</button>
+</div>
+
+<!-- Report Content -->
+<div class="report-content" *ngIf="!isLoading && !loadError">
+
+  <!-- Report Header Banner -->
+  <div class="report-banner">
+    <div class="report-title-section">
+      <h2>Excise Tax Reverse Audit Report</h2>
+      <p class="report-meta">
+        <span><mat-icon>business</mat-icon> {{ client?.name || 'N/A' }}</span>
+        <span><mat-icon>assignment</mat-icon> {{ engagement?.engagementName || 'N/A' }}</span>
+        <span><mat-icon>calendar_today</mat-icon> FY {{ engagement?.fiscalYear || 'N/A' }}</span>
+        <span><mat-icon>person</mat-icon> Prepared by {{ getCurrentUserName() }}</span>
+      </p>
+    </div>
+    <div class="report-date">
+      <span class="date-label">Report Date</span>
+      <span class="date-value">{{ reportDate | date:'mediumDate' }}</span>
+    </div>
+  </div>
+
+  <!-- Executive Summary KPIs -->
+  <section class="report-section">
+    <h3 class="section-title">
+      <mat-icon>insights</mat-icon> Executive Summary
+    </h3>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value">{{ stats?.totalRecords | number }}</div>
+        <div class="kpi-label">Transactions Analyzed</div>
+        <div class="kpi-icon"><mat-icon>receipt_long</mat-icon></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">{{ stats?.flaggedRecords | number }}</div>
+        <div class="kpi-label">Anomalies Detected</div>
+        <div class="kpi-sublabel">{{ ((stats?.flaggingRate || 0) * 100) | number:'1.1-1' }}% flagging rate</div>
+        <div class="kpi-icon"><mat-icon>flag</mat-icon></div>
+      </div>
+      <div class="kpi-card highlight">
+        <div class="kpi-value">{{ claimSummary?.totalClaimedAmount | currency:'USD':'symbol':'1.0-0' }}</div>
+        <div class="kpi-label">Total Claimed</div>
+        <div class="kpi-sublabel">{{ claimSummary?.totalClaims }} claims filed</div>
+        <div class="kpi-icon"><mat-icon>request_quote</mat-icon></div>
+      </div>
+      <div class="kpi-card success">
+        <div class="kpi-value">{{ claimSummary?.totalPaidAmount | currency:'USD':'symbol':'1.0-0' }}</div>
+        <div class="kpi-label">Total Recovered</div>
+        <div class="kpi-sublabel">{{ recoveryRate | number:'1.1-1' }}% recovery rate</div>
+        <div class="kpi-icon"><mat-icon>payments</mat-icon></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transaction Analysis -->
+  <section class="report-section">
+    <h3 class="section-title">
+      <mat-icon>analytics</mat-icon> Transaction Analysis
+    </h3>
+    <div class="analysis-grid">
+      <div class="analysis-table-card">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Transactions Analyzed</td>
+              <td>{{ stats?.totalRecords | number }}</td>
+            </tr>
+            <tr>
+              <td>Anomalies Detected</td>
+              <td>{{ stats?.flaggedRecords | number }}</td>
+            </tr>
+            <tr>
+              <td>Reviewed Records</td>
+              <td>{{ stats?.reviewedRecords | number }}</td>
+            </tr>
+            <tr>
+              <td>Flagging Rate</td>
+              <td>{{ ((stats?.flaggingRate || 0) * 100) | number:'1.1-1' }}%</td>
+            </tr>
+            <tr>
+              <td>Estimated Overpayments</td>
+              <td>{{ stats?.estimatedOverPayments | currency:'USD':'symbol':'1.0-0' }}</td>
+            </tr>
+            <tr>
+              <td>Potential Recovery</td>
+              <td class="text-highlight">{{ stats?.potentialRecovery | currency:'USD':'symbol':'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="analysis-visual">
+        <div class="donut-chart-placeholder">
+          <div class="donut-segment reviewed" [style.--pct]="stats?.reviewedRecords && stats?.totalRecords ? (stats!.reviewedRecords / stats!.totalRecords * 100) : 0">
+            <span>{{ stats?.reviewedRecords && stats?.totalRecords ? (stats!.reviewedRecords / stats!.totalRecords * 100 | number:'1.0-0') : '0' }}%</span>
+          </div>
+          <div class="donut-label">Review Progress</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Claims Summary -->
+  <section class="report-section">
+    <h3 class="section-title">
+      <mat-icon>gavel</mat-icon> Claims Summary
+    </h3>
+    <div class="claims-table-card">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Count</th>
+            <th>Total Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of claimsByStatus">
+            <td>
+              <span class="status-dot" [ngClass]="'status-dot-' + row.status.toLowerCase()"></span>
+              {{ row.status }}
+            </td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.amount | currency:'USD':'symbol':'1.2-2' }}</td>
+          </tr>
+          <tr class="total-row" *ngIf="claimsByStatus.length > 0">
+            <td><strong>Total</strong></td>
+            <td><strong>{{ claimSummary?.totalClaims }}</strong></td>
+            <td><strong>{{ claimSummary?.totalClaimedAmount | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Recovery Analysis -->
+  <section class="report-section">
+    <h3 class="section-title">
+      <mat-icon>account_balance</mat-icon> Recovery Analysis
+    </h3>
+    <div class="recovery-metrics">
+      <div class="recovery-metric">
+        <div class="metric-bar">
+          <div class="bar-fill claimed" style="width: 100%"></div>
+        </div>
+        <div class="metric-detail">
+          <span class="metric-label">Claimed</span>
+          <span class="metric-value">{{ claimSummary?.totalClaimedAmount | currency:'USD':'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="recovery-metric">
+        <div class="metric-bar">
+          <div class="bar-fill approved" [style.width.%]="claimSummary?.totalClaimedAmount ? (claimSummary!.totalApprovedAmount / claimSummary!.totalClaimedAmount * 100) : 0"></div>
+        </div>
+        <div class="metric-detail">
+          <span class="metric-label">Approved</span>
+          <span class="metric-value">{{ claimSummary?.totalApprovedAmount | currency:'USD':'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="recovery-metric">
+        <div class="metric-bar">
+          <div class="bar-fill paid" [style.width.%]="claimSummary?.totalClaimedAmount ? (claimSummary!.totalPaidAmount / claimSummary!.totalClaimedAmount * 100) : 0"></div>
+        </div>
+        <div class="metric-detail">
+          <span class="metric-label">Recovered</span>
+          <span class="metric-value">{{ claimSummary?.totalPaidAmount | currency:'USD':'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deadline Warnings -->
+    <div class="deadline-warning-banner" *ngIf="deadlineWarnings > 0">
+      <mat-icon>warning</mat-icon>
+      <span><strong>{{ deadlineWarnings }}</strong> claim(s) with approaching or expired filing deadlines require attention.</span>
+    </div>
+  </section>
+
+  <!-- Recent Activity -->
+  <section class="report-section" *ngIf="recentActivity.length > 0">
+    <h3 class="section-title">
+      <mat-icon>history</mat-icon> Recent Activity
+    </h3>
+    <div class="activity-list">
+      <div class="activity-item" *ngFor="let log of recentActivity | slice:0:10">
+        <div class="activity-time">{{ log.timestamp | date:'short' }}</div>
+        <div class="activity-detail">
+          <span class="activity-user">{{ log.userName }}</span>
+          <span class="activity-action">{{ log.action }}</span>
+          <span class="activity-entity" *ngIf="log.entityType">on {{ log.entityType }} #{{ log.entityId }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Confidentiality Footer -->
+  <div class="report-footer">
+    <p>This report was generated by <strong>ETAP</strong> (Excise Tax Analytics Platform) on {{ reportDate | date:'medium' }}.</p>
+    <p>Confidential — For internal use only.</p>
+  </div>
+</div>

@@ -1,39 +1,30 @@
 <div class="claim-filing-container">
   <!-- New Claim Generation View -->
   <div *ngIf="isNewClaim && !claim" class="new-claim-wizard">
-    <div class="card">
-      <div class="card-header">
-        <h5>
-          <i class="bi bi-plus-circle"></i> Generate New Refund Claim
-        </h5>
+    <div class="section-card">
+      <div class="section-header">
+        <mat-icon>add_circle</mat-icon>
+        <h5>Generate New Refund Claim</h5>
       </div>
-      <div class="card-body text-center py-5">
-        <i class="bi bi-file-earmark-plus display-1 text-primary mb-4"></i>
+      <div class="wizard-body">
+        <mat-icon class="wizard-icon">note_add</mat-icon>
         <h4>Ready to Generate Refund Claim</h4>
-        <p class="text-muted mb-4">
+        <p class="text-muted">
           Generate a refund claim from {{ transactionIds.length }} selected transaction(s)
         </p>
-        
-        <div *ngIf="error" class="alert alert-danger mb-4">
-          <i class="bi bi-exclamation-triangle"></i> {{ error }}
+
+        <div *ngIf="error" class="error-banner">
+          <mat-icon>warning</mat-icon> {{ error }}
         </div>
 
-        <div class="d-flex gap-2 justify-content-center">
-          <button 
-            class="btn btn-primary btn-lg" 
-            (click)="generateClaimFromTransactions()"
-            [disabled]="generating"
-          >
-            <span *ngIf="!generating">
-              <i class="bi bi-magic"></i> Generate Claim
-            </span>
-            <span *ngIf="generating">
-              <span class="spinner-border spinner-border-sm me-2"></span>
-              Generating...
-            </span>
+        <div class="wizard-actions">
+          <button mat-raised-button color="primary" (click)="generateClaimFromTransactions()" [disabled]="generating">
+            <mat-icon *ngIf="!generating">auto_fix_high</mat-icon>
+            <mat-spinner *ngIf="generating" diameter="18"></mat-spinner>
+            {{ generating ? 'Generating...' : 'Generate Claim' }}
           </button>
-          <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
-            <i class="bi bi-arrow-left"></i> Cancel
+          <button mat-stroked-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Cancel
           </button>
         </div>
       </div>
@@ -42,231 +33,432 @@
 
   <!-- Existing Claim View -->
   <div *ngIf="!loading && claim" class="existing-claim-view">
-  <div class="row">
-    <!-- Left Column: Claim Details -->
-    <div class="col-md-8">
-      <div class="card">
-        <div class="card-header">
-          <h5>
-            <i class="bi bi-file-earmark-text"></i> Refund Claim Details
-            <span class="badge bg-info ms-2">{{ claim.claimNumber }}</span>
-          </h5>
+    <div class="claim-layout">
+      <!-- Left Column: Claim Details -->
+      <div class="claim-main">
+        <!-- Claimant Information -->
+        <div class="section-card">
+          <div class="section-header">
+            <mat-icon>description</mat-icon>
+            <h5>Claim {{ claim.claimNumber }}</h5>
+          </div>
+          <div class="section-body">
+            <h6 class="field-group-title">Claimant Information</h6>
+            <div class="form-grid-2">
+              <mat-form-field appearance="outline">
+                <mat-label>EIN</mat-label>
+                <input matInput [(ngModel)]="formData.ein" [readonly]="isReadOnly">
+                <mat-icon matPrefix>badge</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Name of Claimant</mat-label>
+                <input matInput [(ngModel)]="formData.nameOfClaimant" [readonly]="isReadOnly">
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Address</mat-label>
+              <textarea matInput rows="2" [(ngModel)]="formData.claimantAddress" [readonly]="isReadOnly"></textarea>
+              <mat-icon matPrefix>location_on</mat-icon>
+            </mat-form-field>
+
+            <h6 class="field-group-title">Contact Information</h6>
+            <div class="form-grid-3">
+              <mat-form-field appearance="outline">
+                <mat-label>Contact Name</mat-label>
+                <input matInput [(ngModel)]="formData.contactName" [readonly]="isReadOnly">
+                <mat-icon matPrefix>person_outline</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Phone</mat-label>
+                <input matInput type="tel" [(ngModel)]="formData.contactPhone" [readonly]="isReadOnly">
+                <mat-icon matPrefix>phone</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" [(ngModel)]="formData.contactEmail" [readonly]="isReadOnly">
+                <mat-icon matPrefix>email</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div class="form-grid-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Priority</mat-label>
+                <mat-select [(ngModel)]="formData.priority" [disabled]="isReadOnly">
+                  <mat-option [value]="1">1 - Critical</mat-option>
+                  <mat-option [value]="2">2 - High</mat-option>
+                  <mat-option [value]="3">3 - Medium</mat-option>
+                  <mat-option [value]="4">4 - Low</mat-option>
+                  <mat-option [value]="5">5 - Very Low</mat-option>
+                </mat-select>
+                <mat-icon matPrefix>flag</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div *ngIf="isReadOnly" class="info-banner">
+              <mat-icon>lock</mat-icon>
+              This claim is in <strong>{{ claim.status }}</strong> status and cannot be edited.
+            </div>
+
+            <div class="form-actions">
+              <button mat-raised-button color="primary" (click)="saveClaim()" [disabled]="saving || isReadOnly" *ngIf="!isReadOnly">
+                <mat-icon>save</mat-icon> Save Changes
+              </button>
+              <button mat-stroked-button (click)="goBack()">
+                <mat-icon>{{ claimId ? 'close' : 'arrow_back' }}</mat-icon>
+                {{ claimId ? 'Close' : 'Back to List' }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <!-- Claimant Information -->
-          <h6 class="mb-3">Claimant Information</h6>
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label class="form-label">EIN <span class="text-danger" *ngIf="!isReadOnly">*</span></label>
-              <input type="text" class="form-control" [(ngModel)]="formData.ein" [readonly]="isReadOnly" 
-                     [class.is-invalid]="!formData.ein && formSubmitted" required />
-              <div class="invalid-feedback">EIN is required</div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Name of Claimant <span class="text-danger" *ngIf="!isReadOnly">*</span></label>
-              <input type="text" class="form-control" [(ngModel)]="formData.nameOfClaimant" [readonly]="isReadOnly"
-                     [class.is-invalid]="!formData.nameOfClaimant && formSubmitted" required />
-              <div class="invalid-feedback">Claimant name is required</div>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Address</label>
-            <textarea class="form-control" rows="2" [(ngModel)]="formData.claimantAddress" [readonly]="isReadOnly"></textarea>
-          </div>
 
-          <h6 class="mb-3 mt-4">Contact Information</h6>
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <label class="form-label">Contact Name</label>
-              <input type="text" class="form-control" [(ngModel)]="formData.contactName" [readonly]="isReadOnly" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Phone</label>
-              <input type="tel" class="form-control" [(ngModel)]="formData.contactPhone" [readonly]="isReadOnly" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-control" [(ngModel)]="formData.contactEmail" [readonly]="isReadOnly" />
+        <!-- Justification Section -->
+        <div class="section-card">
+          <div class="section-header">
+            <mat-icon>gavel</mat-icon>
+            <h6>Claim Justification</h6>
+          </div>
+          <div class="section-body">
+            <p class="justification-text">{{ claim.justification }}</p>
+
+            <div *ngIf="claim.aiReasoning" class="ai-reasoning">
+              <mat-icon class="ai-icon">psychology</mat-icon>
+              <div>
+                <strong>AI Analysis</strong>
+                <p>{{ claim.aiReasoning }}</p>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label class="form-label">Priority</label>
-              <select class="form-select" [(ngModel)]="formData.priority" [disabled]="isReadOnly">
-                <option [value]="1">1 - Critical</option>
-                <option [value]="2">2 - High</option>
-                <option [value]="3">3 - Medium</option>
-                <option [value]="4">4 - Low</option>
-                <option [value]="5">5 - Very Low</option>
-              </select>
-            </div>
+        <!-- IRS Citations -->
+        <div class="section-card">
+          <div class="section-header">
+            <mat-icon>menu_book</mat-icon>
+            <h6>IRS Citations &amp; References</h6>
           </div>
-
-          <div *ngIf="isReadOnly" class="alert alert-info mb-3">
-            <i class="bi bi-lock"></i> This claim is in <strong>{{ claim?.status }}</strong> status and cannot be edited.
-          </div>
-
-          <div class="d-flex gap-2 mt-4">
-            <button class="btn btn-primary" (click)="saveClaim()" [disabled]="saving || isReadOnly" *ngIf="!isReadOnly">
-              <i class="bi bi-save"></i> Save Changes
-            </button>
-            <button class="btn btn-outline-secondary" (click)="goBack()">
-              <i class="bi bi-arrow-left"></i> Back to List
-            </button>
+          <div class="section-body">
+            <ul class="citation-list" *ngIf="parsedCitations.length > 0">
+              <li *ngFor="let citation of parsedCitations">
+                <mat-icon class="citation-icon">check_circle</mat-icon>
+                <span>{{ citation }}</span>
+              </li>
+            </ul>
+            <p *ngIf="parsedCitations.length === 0 && claim.irsCitations" class="text-muted">
+              {{ claim.irsCitations }}
+            </p>
+            <p *ngIf="!claim.irsCitations" class="text-muted">No citations available</p>
           </div>
         </div>
       </div>
 
-      <!-- Justification Section -->
-      <div class="card mt-3">
-        <div class="card-header">
-          <h6>Claim Justification</h6>
-        </div>
-        <div class="card-body">
-          <p>{{ claim.justification }}</p>
-          
-          <div *ngIf="claim.aiReasoning" class="mt-3">
-            <strong>AI Analysis:</strong>
-            <p class="text-muted">{{ claim.aiReasoning }}</p>
+      <!-- Right Column: Summary & Actions -->
+      <div class="claim-sidebar">
+        <!-- Status Card -->
+        <div class="section-card">
+          <div class="section-header compact">
+            <mat-icon>info</mat-icon>
+            <h6>Claim Status</h6>
+          </div>
+          <div class="section-body">
+            <div class="status-row">
+              <span class="status-label">Current Status</span>
+              <span [class]="'status-badge ' + getStatusBadgeClass(claim.status)">
+                {{ getStatusDisplayName(claim.status) }}
+              </span>
+            </div>
+
+            <div class="info-row">
+              <span class="info-label">Tax Type</span>
+              <span class="info-value">{{ claim.taxType }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Tax Period</span>
+              <span class="info-value">{{ claim.taxPeriodStart | date:'MM/dd/yyyy' }} – {{ claim.taxPeriodEnd | date:'MM/dd/yyyy' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Tax Year</span>
+              <span class="info-value">{{ claim.taxYear }} {{ claim.taxQuarter }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- IRS Citations -->
-      <div class="card mt-3">
-        <div class="card-header">
-          <h6>IRS Citations & References</h6>
+        <!-- Financial Summary -->
+        <div class="section-card">
+          <div class="section-header compact">
+            <mat-icon>account_balance</mat-icon>
+            <h6>Financial Summary</h6>
+          </div>
+          <div class="section-body">
+            <div class="finance-row">
+              <span>Claimed Amount</span>
+              <strong class="amount-primary">{{ claim.claimedAmount | currency }}</strong>
+            </div>
+            <div class="finance-row">
+              <span>Approved Amount</span>
+              <strong class="amount-success">{{ claim.approvedAmount | currency }}</strong>
+            </div>
+            <div class="finance-row">
+              <span>Paid Amount</span>
+              <strong class="amount-info">{{ claim.paidAmount | currency }}</strong>
+            </div>
+            <div class="finance-divider"></div>
+            <div class="finance-row">
+              <span>Transactions</span>
+              <strong>{{ claim.transactionCount }}</strong>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <ul class="list-unstyled">
-            <li *ngFor="let citation of claim.irsCitations | json">
-              <i class="bi bi-check-circle text-success"></i> {{ citation }}
-            </li>
-          </ul>
+
+        <!-- AI Confidence -->
+        <div class="section-card">
+          <div class="section-header compact">
+            <mat-icon>psychology</mat-icon>
+            <h6>AI Confidence</h6>
+          </div>
+          <div class="section-body">
+            <div class="confidence-display">
+              <span class="confidence-score" [ngClass]="{
+                'score-high': claim.confidenceScore >= 0.8,
+                'score-medium': claim.confidenceScore >= 0.6 && claim.confidenceScore < 0.8,
+                'score-low': claim.confidenceScore < 0.6
+              }">{{ claim.confidenceScore | percent }}</span>
+              <mat-progress-bar
+                mode="determinate"
+                [value]="claim.confidenceScore * 100"
+                [color]="claim.confidenceScore >= 0.8 ? 'primary' : claim.confidenceScore >= 0.6 ? 'accent' : 'warn'">
+              </mat-progress-bar>
+            </div>
+            <p class="ai-recommendation" *ngIf="claim.aiRecommendation">
+              {{ claim.aiRecommendation }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="section-card">
+          <div class="section-header compact">
+            <mat-icon>bolt</mat-icon>
+            <h6>Actions</h6>
+          </div>
+          <div class="section-body actions-stack">
+            <button mat-raised-button color="accent"
+              (click)="markReadyToFile()"
+              *ngIf="claim.status === ClaimStatus.Draft"
+              [disabled]="saving">
+              <mat-icon>check_circle</mat-icon> Mark Ready to File
+            </button>
+
+            <button mat-raised-button color="warn"
+              (click)="generateAndDownloadForm()"
+              *ngIf="claim.status !== ClaimStatus.Draft"
+              [disabled]="generatingForm">
+              <mat-icon *ngIf="!generatingForm">picture_as_pdf</mat-icon>
+              <mat-spinner *ngIf="generatingForm" diameter="18"></mat-spinner>
+              {{ generatingForm ? 'Generating...' : 'Generate Form 8849' }}
+            </button>
+
+            <button mat-raised-button color="primary"
+              (click)="submitClaim()"
+              *ngIf="claim.status === ClaimStatus.ReadyToFile"
+              [disabled]="saving">
+              <mat-icon>send</mat-icon> Submit to IRS
+            </button>
+
+            <button mat-raised-button color="primary"
+              (click)="markUnderReview()"
+              *ngIf="claim.status === ClaimStatus.Submitted"
+              [disabled]="saving">
+              <mat-icon>rate_review</mat-icon> Mark Under Review
+            </button>
+
+            <button mat-stroked-button
+              (click)="createAmendment()"
+              *ngIf="claim.status === ClaimStatus.Rejected || claim.status === ClaimStatus.Appealed">
+              <mat-icon>content_copy</mat-icon> Create Amendment
+            </button>
+          </div>
+        </div>
+
+        <!-- Filing Deadline Card -->
+        <div class="section-card" *ngIf="filingDeadline">
+          <div class="section-header compact">
+            <mat-icon>schedule</mat-icon>
+            <h6>Filing Deadline</h6>
+          </div>
+          <div class="section-body">
+            <div class="deadline-display" [ngClass]="'deadline-' + deadlineUrgency">
+              <div class="deadline-date">{{ filingDeadline | date:'MMM d, yyyy' }}</div>
+              <div class="deadline-days" *ngIf="daysRemaining !== null">
+                <span *ngIf="daysRemaining > 0">{{ daysRemaining }} days remaining</span>
+                <span *ngIf="daysRemaining <= 0" class="text-danger"><strong>EXPIRED</strong></span>
+              </div>
+            </div>
+            <p class="deadline-note">
+              IRS Form 8849 must be filed within 3 years of the tax payment date.
+            </p>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Right Column: Summary & Actions -->
-    <div class="col-md-4">
-      <!-- Status Card -->
-      <div class="card mb-3">
-        <div class="card-header">
-          <h6>Claim Status</h6>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <strong>Current Status:</strong>
-            <br>
-            <span class="badge bg-{{ claim.status === 'Draft' ? 'secondary' : claim.status === 'Submitted' ? 'primary' : 'success' }} mt-1">
-              {{ claim.status }}
-            </span>
-          </div>
-          
-          <div class="mb-3">
-            <strong>Tax Type:</strong> {{ claim.taxType }}
-          </div>
-          
-          <div class="mb-3">
-            <strong>Tax Period:</strong>
-            <br>{{ claim.taxPeriodStart | date:'MM/dd/yyyy' }} - {{ claim.taxPeriodEnd | date:'MM/dd/yyyy' }}
-          </div>
-          
-          <div class="mb-3">
-            <strong>Tax Year:</strong> {{ claim.taxYear }} {{ claim.taxQuarter }}
-          </div>
-        </div>
+    <!-- IRS Response & Reconciliation Panel (Post-Submission) -->
+    <div class="section-card irs-panel" *ngIf="isPostSubmission">
+      <div class="section-header irs-header">
+        <mat-icon>mail</mat-icon>
+        <h5>IRS Response &amp; Payment Reconciliation</h5>
       </div>
+      <div class="section-body">
+        <div class="irs-grid">
+          <div class="irs-column">
+            <h6 class="field-group-title">IRS Correspondence</h6>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>IRS Tracking / Confirmation Number</mat-label>
+              <input matInput [(ngModel)]="irsTrackingNumber" placeholder="e.g., 8849-2026-001234">
+              <mat-icon matPrefix>confirmation_number</mat-icon>
+            </mat-form-field>
 
-      <!-- Financial Summary -->
-      <div class="card mb-3">
-        <div class="card-header">
-          <h6>Financial Summary</h6>
-        </div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between mb-2">
-            <span>Claimed Amount:</span>
-            <strong class="text-primary">${{ claim.claimedAmount | number:'1.2-2' }}</strong>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Approved Amount:</span>
-            <strong class="text-success">${{ claim.approvedAmount | number:'1.2-2' }}</strong>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Paid Amount:</span>
-            <strong class="text-info">${{ claim.paidAmount | number:'1.2-2' }}</strong>
-          </div>
-          <hr>
-          <div class="d-flex justify-content-between">
-            <span>Transactions:</span>
-            <strong>{{ claim.transactionCount }}</strong>
-          </div>
-        </div>
-      </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Correspondence Date</mat-label>
+              <input matInput type="date" [(ngModel)]="irsCorrespondenceDate">
+              <mat-icon matPrefix>event</mat-icon>
+            </mat-form-field>
 
-      <!-- AI Confidence -->
-      <div class="card mb-3">
-        <div class="card-header">
-          <h6>AI Confidence</h6>
-        </div>
-        <div class="card-body">
-          <div class="progress mb-2">
-            <div 
-              class="progress-bar bg-{{ claim.confidenceScore >= 0.8 ? 'success' : claim.confidenceScore >= 0.6 ? 'warning' : 'danger' }}"
-              [style.width.%]="claim.confidenceScore * 100"
-            >
-              {{ claim.confidenceScore | percent }}
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Response Notes</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="irsNotes" placeholder="Enter IRS correspondence details..."></textarea>
+              <mat-icon matPrefix>notes</mat-icon>
+            </mat-form-field>
+          </div>
+          <div class="irs-column">
+            <h6 class="field-group-title">Payment Details</h6>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Actual Payment Amount</mat-label>
+              <input matInput type="number" [(ngModel)]="irsActualPayment" placeholder="0.00">
+              <span matPrefix class="currency-prefix">$&nbsp;</span>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Check / EFT Number</mat-label>
+              <input matInput [(ngModel)]="irsCheckNumber" placeholder="Check or EFT reference">
+              <mat-icon matPrefix>receipt</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Payment Date</mat-label>
+              <input matInput type="date" [(ngModel)]="irsPaymentDate">
+              <mat-icon matPrefix>event</mat-icon>
+            </mat-form-field>
+
+            <!-- Reconciliation Summary -->
+            <div class="reconciliation-card" *ngIf="irsActualPayment">
+              <div class="recon-row">
+                <span>Claimed:</span>
+                <strong>{{ claim.claimedAmount | currency }}</strong>
+              </div>
+              <div class="recon-row">
+                <span>Received:</span>
+                <strong class="amount-success">{{ irsActualPayment | currency }}</strong>
+              </div>
+              <div class="recon-row recon-variance" [ngClass]="{
+                'variance-negative': irsActualPayment < claim.claimedAmount,
+                'variance-positive': irsActualPayment >= claim.claimedAmount
+              }">
+                <span>Variance:</span>
+                <strong>{{ (irsActualPayment - claim.claimedAmount) | currency }}</strong>
+              </div>
             </div>
           </div>
-          <p class="small text-muted" *ngIf="claim.aiRecommendation">
-            {{ claim.aiRecommendation }}
-          </p>
+        </div>
+
+        <div class="irs-actions">
+          <button mat-raised-button color="primary" (click)="saveIRSResponse()" [disabled]="savingIRS">
+            <mat-icon>save</mat-icon> Save Response
+          </button>
+          <button mat-raised-button color="accent" (click)="recordIRSApproval()"
+                  [disabled]="savingIRS"
+                  *ngIf="claim.status === ClaimStatus.UnderReview">
+            <mat-icon>check_circle</mat-icon> Record Approval
+          </button>
+          <button mat-raised-button color="warn" (click)="recordIRSRejection()"
+                  [disabled]="savingIRS"
+                  *ngIf="claim.status === ClaimStatus.UnderReview">
+            <mat-icon>cancel</mat-icon> Record Rejection
+          </button>
+          <button mat-raised-button (click)="recordPayment()"
+                  [disabled]="savingIRS || !irsActualPayment"
+                  *ngIf="claim.status === ClaimStatus.Approved || claim.status === ClaimStatus.PartiallyPaid"
+                  class="payment-btn">
+            <mat-icon>payments</mat-icon> Record Payment
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- Action Buttons -->
-      <div class="card">
-        <div class="card-header">
-          <h6>Actions</h6>
+    <!-- Supporting Documents Panel -->
+    <div class="section-card">
+      <div class="section-header">
+        <mat-icon>folder</mat-icon>
+        <h5>Supporting Documents</h5>
+      </div>
+      <div class="section-body">
+        <p class="text-muted doc-intro">
+          Attach invoices, exemption certificates, carrier logs, and other evidence to support this claim.
+        </p>
+
+        <!-- Upload Area -->
+        <div class="document-upload-area" *ngIf="!isReadOnly || isPostSubmission">
+          <input type="file" id="docUpload" (change)="onDocumentSelected($event)"
+                 accept=".pdf,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.doc,.docx"
+                 hidden />
+          <label for="docUpload" class="upload-drop-zone" [class.uploading]="uploadingDocument">
+            <mat-icon *ngIf="!uploadingDocument">cloud_upload</mat-icon>
+            <mat-spinner *ngIf="uploadingDocument" diameter="24"></mat-spinner>
+            <span *ngIf="!uploadingDocument">Click to upload a document</span>
+            <span *ngIf="uploadingDocument">Uploading...</span>
+            <small>PDF, Excel, Images, Word (max 10MB)</small>
+          </label>
         </div>
-        <div class="card-body">
-          <div class="d-grid gap-2">
-            <button 
-              class="btn btn-success" 
-              (click)="markReadyToFile()"
-              *ngIf="claim.status === 'Draft'"
-              [disabled]="saving"
-            >
-              <i class="bi bi-check-circle"></i> Mark Ready to File
-            </button>
-            
-            <button 
-              class="btn btn-warning" 
-              (click)="generateAndDownloadForm()"
-              *ngIf="claim.status !== 'Draft'"
-            >
-              <i class="bi bi-file-pdf"></i> Generate Form 8849
-            </button>
-            
-            <button 
-              class="btn btn-primary" 
-              (click)="submitClaim()"
-              *ngIf="claim.status === 'ReadyToFile'"
-              [disabled]="saving"
-            >
-              <i class="bi bi-send"></i> Submit to IRS
+
+        <!-- Document List -->
+        <div class="document-list" *ngIf="supportingDocuments.length > 0">
+          <div class="document-item" *ngFor="let doc of supportingDocuments; let i = index">
+            <div class="doc-icon">
+              <mat-icon>{{ getDocumentIcon(doc.type) }}</mat-icon>
+            </div>
+            <div class="doc-info">
+              <span class="doc-name">{{ doc.name }}</span>
+              <span class="doc-meta">{{ doc.size }} · {{ doc.uploadedAt | date:'short' }}</span>
+            </div>
+            <button mat-icon-button color="warn" (click)="removeDocument(i)" matTooltip="Remove">
+              <mat-icon>delete</mat-icon>
             </button>
           </div>
+        </div>
+
+        <div class="no-documents" *ngIf="supportingDocuments.length === 0">
+          <mat-icon>description</mat-icon>
+          <span>No documents attached</span>
+        </div>
+
+        <!-- Completeness Indicator -->
+        <div class="doc-completeness" *ngIf="supportingDocuments.length > 0">
+          <mat-icon>info</mat-icon>
+          <span>{{ supportingDocuments.length }} document(s) attached.
+            Recommended: Invoice copies, exemption certificates, fuel purchase logs.
+          </span>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Loading State -->
-<div *ngIf="loading" class="text-center py-5">
-  <div class="spinner-border text-primary"></div>
-  <p class="mt-2">Loading claim...</p>
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading claim...</p>
+  </div>
 </div>

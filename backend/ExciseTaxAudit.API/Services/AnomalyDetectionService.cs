@@ -261,31 +261,50 @@ public class AnomalyDetectionService
     }
 
     /// <summary>
-    /// Calculate expected tax based on state/fuel type and safe harbor percentage.
+    /// Calculate expected tax based on per-gallon federal + state excise tax rates.
+    /// Uses the same rate structure as TaxRatePlugin and IRSDataConnectorService
+    /// to ensure consistent anomaly detection and AI agent review results.
     /// </summary>
     public decimal CalculateExpectedTax(TransactionRecord transaction)
     {
-        // Simple tax rate calculation (adjust based on your state rate tables)
-        var stateTaxRates = new Dictionary<string, decimal>
+        // Per-gallon excise tax rates (Federal + State combined)
+        // Must stay in sync with TaxRatePlugin.cs and IRSDataConnectorService._fallbackRates
+        var dieselRates = new Dictionary<string, decimal>
         {
-            { "CA", 0.1625m },
-            { "TX", 0.20m },
-            { "NY", 0.080m },
-            { "IL", 0.1925m }
-            // Add more states as needed
+            { "CA", 0.244m + 0.133m }, // $0.377/gal
+            { "TX", 0.244m + 0.20m },  // $0.444/gal
+            { "NY", 0.244m + 0.169m }, // $0.413/gal
+            { "IL", 0.244m + 0.219m }, // $0.463/gal
+            { "FL", 0.244m + 0.191m }, // $0.435/gal
+            { "PA", 0.244m + 0.255m }, // $0.499/gal
+            { "OH", 0.244m + 0.28m }   // $0.524/gal
         };
 
-        var taxRate = stateTaxRates.ContainsKey(transaction.MerchantState ?? "")
-            ? stateTaxRates[transaction.MerchantState ?? ""]
-            : 0.184m; // Default federal rate
+        var gasolineRates = new Dictionary<string, decimal>
+        {
+            { "CA", 0.184m + 0.539m }, // $0.723/gal
+            { "TX", 0.184m + 0.20m },  // $0.384/gal
+            { "NY", 0.184m + 0.459m }, // $0.643/gal
+            { "IL", 0.184m + 0.392m }, // $0.576/gal
+            { "FL", 0.184m + 0.196m }, // $0.380/gal
+            { "PA", 0.184m + 0.576m }, // $0.760/gal
+            { "OH", 0.184m + 0.385m }  // $0.569/gal
+        };
+
+        // Determine fuel category
+        var isDiesel = transaction.FuelType?.Contains("DIESEL", StringComparison.OrdinalIgnoreCase) == true;
+        var rates = isDiesel ? dieselRates : gasolineRates;
+        var defaultRate = isDiesel ? 0.244m : 0.184m; // Federal rate as fallback
+
+        var state = transaction.MerchantState ?? "";
+        var perGallonRate = rates.ContainsKey(state) ? rates[state] : defaultRate;
 
         // Apply safe harbor discount if applicable
         if (transaction.K_SafeHarborPercentage.HasValue && transaction.K_SafeHarborPercentage > 0)
         {
-            taxRate = taxRate * (1 - transaction.K_SafeHarborPercentage.Value);
+            perGallonRate = perGallonRate * (1 - transaction.K_SafeHarborPercentage.Value);
         }
 
-        var expectedTax = transaction.NetCost * taxRate;
-        return expectedTax;
+        return transaction.Quantity * perGallonRate;
     }
 }

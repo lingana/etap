@@ -1,0 +1,178 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div class="header-content">
+    <div class="header-text">
+      <h1>
+        <mat-icon class="header-icon">content_copy</mat-icon>
+        Duplicate Detection
+      </h1>
+      <p class="header-subtitle">Identify and resolve duplicate transactions to prevent inflated claim amounts</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-white" (click)="resolveAllKeepFirst()" 
+              [disabled]="isLoading || getUnresolvedCount() === 0">
+        <mat-icon>done_all</mat-icon>
+        Resolve All (Keep First)
+      </button>
+      <button mat-raised-button color="primary" (click)="loadTransactions()" [disabled]="isLoading">
+        <mat-icon>refresh</mat-icon>
+        Re-scan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-container" *ngIf="isLoading">
+  <mat-spinner diameter="40"></mat-spinner>
+  <p>Scanning for duplicates...</p>
+</div>
+
+<!-- Error -->
+<div class="error-container" *ngIf="loadError && !isLoading">
+  <mat-icon>error_outline</mat-icon>
+  <p>{{ loadError }}</p>
+  <button mat-raised-button color="primary" (click)="loadTransactions()">Retry</button>
+</div>
+
+<!-- Content -->
+<div class="dedup-content" *ngIf="!isLoading && !loadError">
+
+  <!-- Summary Cards -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <mat-icon>receipt_long</mat-icon>
+      <div class="card-info">
+        <span class="card-value">{{ allTransactions.length | number }}</span>
+        <span class="card-label">Total Transactions</span>
+      </div>
+    </div>
+    <div class="summary-card warning">
+      <mat-icon>content_copy</mat-icon>
+      <div class="card-info">
+        <span class="card-value">{{ duplicateGroups.length }}</span>
+        <span class="card-label">Duplicate Groups</span>
+      </div>
+    </div>
+    <div class="summary-card danger">
+      <mat-icon>attach_money</mat-icon>
+      <div class="card-info">
+        <span class="card-value">{{ totalDuplicateAmount | currency:'USD':'symbol':'1.0-0' }}</span>
+        <span class="card-label">Duplicate Amount</span>
+      </div>
+    </div>
+    <div class="summary-card success">
+      <mat-icon>check_circle</mat-icon>
+      <div class="card-info">
+        <span class="card-value">{{ resolvedCount }} / {{ duplicateGroups.length }}</span>
+        <span class="card-label">Resolved</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Duplicates -->
+  <div class="no-duplicates" *ngIf="duplicateGroups.length === 0">
+    <mat-icon>verified</mat-icon>
+    <h3>No Duplicates Found</h3>
+    <p>All {{ allTransactions.length | number }} transactions are unique. Your data is clean!</p>
+  </div>
+
+  <!-- Duplicate Groups List -->
+  <div class="groups-container" *ngIf="duplicateGroups.length > 0">
+    <div class="groups-list">
+      <h4>Duplicate Groups</h4>
+      <div class="group-item" *ngFor="let group of duplicateGroups" 
+           [class.resolved]="group.resolved"
+           [class.selected]="selectedGroup === group"
+           (click)="selectGroup(group)">
+        <div class="group-header">
+          <div class="group-id">
+            <mat-icon *ngIf="!group.resolved">warning</mat-icon>
+            <mat-icon *ngIf="group.resolved" class="resolved-icon">check_circle</mat-icon>
+            <span>{{ group.transactions[0].transactionNumber }}</span>
+          </div>
+          <span class="group-count">{{ group.count }} records</span>
+        </div>
+        <div class="group-detail">
+          <span>{{ group.transactions[0].merchantName }} · {{ group.transactions[0].transactionDate | date:'shortDate' }}</span>
+          <span class="group-amount">{{ group.totalAmount | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+        <div class="group-resolution" *ngIf="group.resolved">
+          <small>
+            {{ group.resolution === 'keep_first' ? 'Keep first' : group.resolution === 'keep_all' ? 'All distinct' : 'All excluded' }}
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div class="detail-panel" *ngIf="selectedGroup">
+      <div class="detail-header">
+        <h4>Transaction #{{ selectedGroup.transactions[0].transactionNumber }}</h4>
+        <span class="detail-count">{{ selectedGroup.count }} duplicate records</span>
+      </div>
+
+      <!-- Side-by-side comparison table -->
+      <div class="comparison-table-container">
+        <table mat-table [dataSource]="detailDataSource" class="comparison-table">
+          <ng-container matColumnDef="transactionNumber">
+            <th mat-header-cell *matHeaderCellDef>Txn #</th>
+            <td mat-cell *matCellDef="let t">{{ t.transactionNumber }}</td>
+          </ng-container>
+          <ng-container matColumnDef="transactionDate">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let t">{{ t.transactionDate | date:'shortDate' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="merchantName">
+            <th mat-header-cell *matHeaderCellDef>Merchant</th>
+            <td mat-cell *matCellDef="let t">{{ t.merchantName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="merchantState">
+            <th mat-header-cell *matHeaderCellDef>State</th>
+            <td mat-cell *matCellDef="let t">{{ t.merchantState }}</td>
+          </ng-container>
+          <ng-container matColumnDef="totalTaxAmount">
+            <th mat-header-cell *matHeaderCellDef>Tax Amount</th>
+            <td mat-cell *matCellDef="let t">{{ t.totalTaxAmount | currency:'USD':'symbol':'1.2-2' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="anomalyScore">
+            <th mat-header-cell *matHeaderCellDef>Score</th>
+            <td mat-cell *matCellDef="let t">{{ t.anomalyScore | number:'1.0-0' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+
+      <!-- Resolution Actions -->
+      <div class="resolution-actions" *ngIf="!selectedGroup.resolved">
+        <h5>How would you like to resolve this?</h5>
+        <div class="action-buttons">
+          <button mat-raised-button color="primary" (click)="resolveGroup(selectedGroup, 'keep_first')">
+            <mat-icon>filter_1</mat-icon>
+            Keep First, Exclude Duplicates
+          </button>
+          <button mat-stroked-button (click)="resolveGroup(selectedGroup, 'keep_all')">
+            <mat-icon>done_all</mat-icon>
+            Mark All as Distinct
+          </button>
+          <button mat-stroked-button color="warn" (click)="resolveGroup(selectedGroup, 'exclude_all')">
+            <mat-icon>block</mat-icon>
+            Exclude All
+          </button>
+        </div>
+      </div>
+
+      <div class="resolved-banner" *ngIf="selectedGroup.resolved">
+        <mat-icon>check_circle</mat-icon>
+        Resolved: {{ selectedGroup.resolution === 'keep_first' ? 'Keeping first occurrence' : selectedGroup.resolution === 'keep_all' ? 'All marked as distinct' : 'All excluded' }}
+      </div>
+    </div>
+
+    <!-- No selection placeholder -->
+    <div class="detail-panel no-selection" *ngIf="!selectedGroup">
+      <mat-icon>touch_app</mat-icon>
+      <p>Select a duplicate group from the left panel to view details and resolve</p>
+    </div>
+  </div>
+</div>

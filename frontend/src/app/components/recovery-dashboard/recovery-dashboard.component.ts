@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RefundClaimService } from '../../services/refund-claim.service';
+import { TaxClientService } from '../../services/tax-client.service';
 import { RefundClaimSummary, ClaimStatus } from '../../models/refund-claim.model';
 
 @Component({
@@ -17,7 +18,10 @@ export class RecoveryDashboardComponent implements OnInit {
   taxTypeChartData: any[] = [];
   refundTypeChartData: any[] = [];
 
-  constructor(private refundClaimService: RefundClaimService) {}
+  constructor(
+    private refundClaimService: RefundClaimService,
+    private taxClientService: TaxClientService
+  ) {}
 
   ngOnInit(): void {
     this.loadSummary();
@@ -25,7 +29,8 @@ export class RecoveryDashboardComponent implements OnInit {
 
   loadSummary(): void {
     this.loading = true;
-    this.refundClaimService.getSummary().subscribe({
+    const engagementId = this.taxClientService.getSelectedEngagement()?.id;
+    this.refundClaimService.getSummary(engagementId).subscribe({
       next: (summary) => {
         this.summary = summary;
         this.prepareChartData();

@@ -49,35 +49,108 @@ public class SyntheticDataService
         for (int i = 1; i <= recordCount; i++)
         {
             var transactionDate = DateTime.UtcNow.AddDays(-random.Next(0, 730)); // Last 2 years
-            var quantity = Math.Round((decimal)(random.NextDouble() * 150 + 20), 1); // 20-170 gallons
+
+            // Create mix of regular, large, and MEGA transactions
+            // 5% MEGA fleet operations (1500-2500 gallons) - TARGET THESE FOR REFUNDS!
+            // 15% Large fleet refueling (500-1000 gallons) - ALSO TARGET FOR REFUNDS
+            // 80% Normal transactions (20-170 gallons)
+            var transactionType = random.Next(100);
+            bool isMegaTransaction = transactionType < 5;  // 5% mega
+            bool isLargeTransaction = transactionType >= 5 && transactionType < 20; // 15% large
+
+            var quantity = isMegaTransaction
+                ? Math.Round((decimal)(random.NextDouble() * 1000 + 1500), 1)  // 1500-2500 gallons (mega fleet)
+                : isLargeTransaction 
+                    ? Math.Round((decimal)(random.NextDouble() * 500 + 500), 1)  // 500-1000 gallons (large fleet)
+                    : Math.Round((decimal)(random.NextDouble() * 150 + 20), 1);   // 20-170 gallons (normal)
+
             var pricePerUnit = Math.Round((decimal)(random.NextDouble() * 1.50 + 3.50), 4); // $3.50-$5.00
             var netCost = Math.Round(quantity * pricePerUnit, 2);
             var state = states[random.Next(states.Length)];
 
-            // Add realistic anomalies (15% of records)
-            bool isAnomaly = random.Next(100) < 15;
-            if (isAnomaly)
+            // Calculate tax based on state (declare before anomaly logic)
+            var taxRate = GetStateTaxRate(state);
+            var totalTaxAmount = Math.Round(netCost * (taxRate / 100), 2);
+            var grossCost = netCost;
+
+            // STRATEGIC OVERPAYMENT TARGETING:
+            // - Mega transactions: 90% chance of overpayment (BIG REFUNDS!)
+            // - Large transactions: 70% chance of overpayment (GOOD REFUNDS)
+            // - Normal transactions: 15% chance of overpayment (small refunds)
+
+            var overpaymentChance = isMegaTransaction ? 90 
+                                  : isLargeTransaction ? 70 
+                                  : 15;
+
+            bool shouldBeOverpayment = random.Next(100) < overpaymentChance;
+
+            if (shouldBeOverpayment)
             {
-                switch (random.Next(3))
+                // OVERPAYMENT SCENARIOS - Larger transactions get larger overpayment %
+                var overpaymentCase = isMegaTransaction 
+                    ? random.Next(5, 10)  // Cases 5-9 (30-100% overpayment)
+                    : isLargeTransaction
+                        ? random.Next(6, 10) // Cases 6-9 (30-75% overpayment)
+                        : random.Next(8, 10); // Cases 8-9 (30-40% overpayment)
+
+                switch (overpaymentCase)
                 {
-                    case 0: // Price spike anomaly
-                        pricePerUnit = Math.Round((decimal)(random.NextDouble() * 2.00 + 5.50), 4);
-                        netCost = Math.Round(quantity * pricePerUnit, 2);
+                    case 5: // MAJOR 100% overpayment - MEGA transactions only
+                        var baseTax1 = Math.Round(netCost * (taxRate / 100), 2);
+                        totalTaxAmount = Math.Round(baseTax1 * 2.0m, 2);
                         break;
-                    case 1: // Unusual quantity
-                        quantity = (decimal)(random.NextDouble() * 300 + 200);
-                        netCost = Math.Round(quantity * pricePerUnit, 2);
+                    case 6: // Large 75% overpayment
+                        var baseTax2 = Math.Round(netCost * (taxRate / 100), 2);
+                        totalTaxAmount = Math.Round(baseTax2 * 1.75m, 2);
                         break;
-                    case 2: // Zero tax - discrepancy
-                        // Tax will be zero to simulate missing tax or error
+                    case 7: // Significant 50% overpayment
+                        var baseTax3 = Math.Round(netCost * (taxRate / 100), 2);
+                        totalTaxAmount = Math.Round(baseTax3 * 1.50m, 2);
+                        break;
+                    case 8: // Wrong state rate 40% overpayment
+                        var baseTax4 = Math.Round(netCost * (taxRate / 100), 2);
+                        totalTaxAmount = Math.Round(baseTax4 * 1.40m, 2);
+                        break;
+                    case 9: // Moderate 30% overpayment
+                        var baseTax5 = Math.Round(netCost * (taxRate / 100), 2);
+                        totalTaxAmount = Math.Round(baseTax5 * 1.30m, 2);
                         break;
                 }
             }
-
-            // Calculate tax based on state
-            var taxRate = GetStateTaxRate(state);
-            var totalTaxAmount = random.Next(100) < 20 ? 0 : Math.Round(netCost * (taxRate / 100), 2);
-            var grossCost = netCost;
+            else
+            {
+                // Regular anomalies (price spikes, quantity issues, zero tax)
+                var hasAnomaly = random.Next(100) < 15; // 15% have other anomalies
+                if (hasAnomaly)
+                {
+                    switch (random.Next(5))
+                    {
+                        case 0: // Severe price spike
+                            pricePerUnit = Math.Round((decimal)(random.NextDouble() * 2.00 + 5.50), 4);
+                            netCost = Math.Round(quantity * pricePerUnit, 2);
+                            totalTaxAmount = Math.Round(netCost * (taxRate / 100), 2);
+                            break;
+                        case 1: // Moderate price spike
+                            pricePerUnit = Math.Round((decimal)(random.NextDouble() * 1.00 + 5.00), 4);
+                            netCost = Math.Round(quantity * pricePerUnit, 2);
+                            totalTaxAmount = Math.Round(netCost * (taxRate / 100), 2);
+                            break;
+                        case 2: // Unusual high quantity
+                            quantity = (decimal)(random.NextDouble() * 300 + 200);
+                            netCost = Math.Round(quantity * pricePerUnit, 2);
+                            totalTaxAmount = Math.Round(netCost * (taxRate / 100), 2);
+                            break;
+                        case 3: // Unusual low quantity
+                            quantity = (decimal)(random.NextDouble() * 5 + 1);
+                            netCost = Math.Round(quantity * pricePerUnit, 2);
+                            totalTaxAmount = Math.Round(netCost * (taxRate / 100), 2);
+                            break;
+                        case 4: // Zero tax
+                            totalTaxAmount = 0;
+                            break;
+                    }
+                }
+            }
 
             // Mask PII: Employee name masked, Card number masked
             var cardLast4 = random.Next(1000, 9999).ToString();
@@ -160,41 +233,141 @@ public class SyntheticDataService
             records.Add(record);
         }
 
-        // For demo purposes: Mark 20% of anomalies as APPROVED with claim amounts
+        // For demo purposes: Create realistic status distribution with proper refund scenarios
+        // Expected distribution:
+        // - 12% APPROVED (with claim amounts - TAX OVERPAYMENTS = REFUNDS)
+        // - 15% REVIEWED (flagged and reviewed, awaiting approval)
+        // - 8% REJECTED (reviewed but deemed invalid)
+        // - 10% PENDING (flagged but not yet reviewed)
+        // - 55% null (normal transactions, not flagged)
+
+        var anomalousRecords = records.Where(r => r.TotalTaxAmount == 0 || r.PricePerUnit > 5.0m || r.Quantity > 200 || r.Quantity < 10).ToList();
         var approvedCount = 0;
         var reviewedCount = 0;
-        foreach (var record in records.Where(r => r.AnomalyScore > 0.5f).OrderByDescending(r => r.AnomalyScore))
+        var rejectedCount = 0;
+        var pendingCount = 0;
+
+        // Prioritize LARGE overpayment records for approval (biggest refund opportunities first!)
+        var overpaymentRecords = records
+            .Where(r => {
+                var expectedTax = r.NetCost * (GetStateTaxRate(r.MerchantState ?? "CA") / 100m);
+                var overpayment = r.TotalTaxAmount - expectedTax;
+                return overpayment > 0.50m; // Even small overpayments count
+            })
+            .OrderByDescending(r => {
+                // Sort by refund amount (largest first)
+                var expectedTax = r.NetCost * (GetStateTaxRate(r.MerchantState ?? "CA") / 100m);
+                return r.TotalTaxAmount - expectedTax;
+            })
+            .ToList();
+
+        _logger.LogInformation($"Found {overpaymentRecords.Count} overpayment records for potential approval");
+
+        // Process overpayments first (these are refund opportunities)
+        // APPROVE MORE RECORDS (15% of total, not just anomalies)
+        var approvalTarget = Math.Max(recordCount * 12 / 100, overpaymentRecords.Count / 2); // At least 12% or half of overpayments
+
+        foreach (var record in overpaymentRecords)
         {
-            if (approvedCount < recordCount * 0.05) // 5% approved
+            if (approvedCount < approvalTarget)
             {
-                record.Status = "APPROVED";
-                record.ReviewedByUserId = "1";
-                record.ReviewedByUserName = "Naveen L";
-                record.ReviewedDate = record.TransactionDate.AddDays(random.Next(1, 5));
-                record.ApprovedByUserId = "2";
-                record.ApprovedByUserName = "Sarah Johnson";
-                record.ApprovedDate = record.TransactionDate.AddDays(random.Next(6, 10));
-                record.ClaimSchedule = new[] { "Schedule 1", "Schedule 2", "Schedule 3", "Schedule 6" }[random.Next(4)];
-                record.TaxPeriod = $"Q{(record.TransactionDate.Month - 1) / 3 + 1} {record.TransactionDate.Year}";
-                
-                // Calculate claim amount as difference between expected and actual tax
-                var expectedTax = record.Quantity * GetStateTaxRate(record.MerchantState ?? "CA") / 100m;
-                record.ClaimAmount = Math.Max(0, record.TotalTaxAmount - expectedTax);
-                
-                approvedCount++;
+                // Calculate proper refund amount (overpayment)
+                var expectedTax = record.NetCost * (GetStateTaxRate(record.MerchantState ?? "CA") / 100m);
+                var overpayment = record.TotalTaxAmount - expectedTax;
+
+                if (overpayment > 0.50m) // Approve all meaningful refunds (> $0.50)
+                {
+                    record.Status = "APPROVED";
+                    record.ReviewedByUserId = "1";
+                    record.ReviewedByUserName = "Naveen L";
+                    record.ReviewedDate = record.TransactionDate.AddDays(random.Next(1, 5));
+                    record.ApprovedByUserId = "2";
+                    record.ApprovedByUserName = "Sarah Johnson";
+                    record.ApprovedDate = record.TransactionDate.AddDays(random.Next(6, 10));
+                    record.ClaimSchedule = new[] { "Schedule 1", "Schedule 2", "Schedule 3", "Schedule 6" }[random.Next(4)];
+                    record.TaxPeriod = $"Q{(record.TransactionDate.Month - 1) / 3 + 1} {record.TransactionDate.Year}";
+                    record.ClaimAmount = Math.Round(overpayment, 2); // This is the REFUND amount
+
+                    // Add descriptive comments based on refund size
+                    var refundCategory = overpayment switch
+                    {
+                        > 500 => "MAJOR REFUND",
+                        > 200 => "LARGE REFUND",
+                        > 100 => "SIGNIFICANT REFUND",
+                        > 50 => "MODERATE REFUND",
+                        _ => "REFUND"
+                    };
+                    record.ReviewedComments = $"{refundCategory} APPROVED - Tax overpayment of ${overpayment:F2}";
+
+                    approvedCount++;
+                }
             }
-            else if (reviewedCount < recordCount * 0.08) // Additional 8% reviewed but not yet approved
+        }
+
+        // Process remaining anomalous records for other statuses
+        var remainingAnomalies = anomalousRecords.Except(overpaymentRecords).ToList();
+
+        foreach (var record in remainingAnomalies.OrderByDescending(r => r.NetCost))
+        {
+            if (reviewedCount < anomalousRecords.Count * 0.15) // 15% reviewed but not approved
             {
                 record.Status = "REVIEWED";
                 record.ReviewedByUserId = "1";
                 record.ReviewedByUserName = "Naveen L";
                 record.ReviewedDate = record.TransactionDate.AddDays(random.Next(1, 5));
+                record.ReviewedComments = "Flagged for manager approval";
                 reviewedCount++;
             }
+            else if (rejectedCount < anomalousRecords.Count * 0.10) // 10% rejected
+            {
+                record.Status = "REJECTED";
+                record.ReviewedByUserId = "1";
+                record.ReviewedByUserName = "Naveen L";
+                record.ReviewedDate = record.TransactionDate.AddDays(random.Next(1, 5));
+                record.ReviewedComments = new[] { 
+                    "Insufficient documentation", 
+                    "Outside audit scope", 
+                    "Merchant error - not recoverable",
+                    "Below materiality threshold" 
+                }[random.Next(4)];
+                rejectedCount++;
+            }
+            else if (pendingCount < anomalousRecords.Count * 0.10) // 10% pending review
+            {
+                record.Status = "PENDING";
+                pendingCount++;
+            }
+            // Remaining 55% stay null (normal transactions)
         }
 
         _cachedRecords = records;
-        _logger.LogInformation($"Successfully generated {records.Count} synthetic records ({approvedCount} approved, {reviewedCount} reviewed) with realistic data and PII masking");
+
+        var approvedRefunds = records.Where(r => r.Status == "APPROVED" && r.ClaimAmount.HasValue).ToList();
+        var totalRefundAmount = approvedRefunds.Sum(r => r.ClaimAmount.Value);
+        var largeRefunds = approvedRefunds.Where(r => r.ClaimAmount > 100).Count();
+        var majorRefunds = approvedRefunds.Where(r => r.ClaimAmount > 500).Count();
+        var megaRefunds = approvedRefunds.Where(r => r.ClaimAmount > 1000).Count();
+
+        // Get top 5 refunds for demo visibility
+        var top5Refunds = approvedRefunds
+            .OrderByDescending(r => r.ClaimAmount)
+            .Take(5)
+            .Select(r => $"${r.ClaimAmount:F2}")
+            .ToList();
+
+        var megaTransactions = records.Where(r => r.Quantity > 1500).Count();
+        var largeTransactions = records.Where(r => r.Quantity >= 500 && r.Quantity <= 1500).Count();
+
+        _logger.LogInformation(
+            $"✅ Successfully generated {records.Count} synthetic records with PII masking\n" +
+            $"  📊 Transaction Mix: {megaTransactions} MEGA (1500+ gal), {largeTransactions} LARGE (500-1500 gal)\n" +
+            $"  📊 Status Distribution: {approvedCount} APPROVED, {reviewedCount} REVIEWED, {rejectedCount} REJECTED, {pendingCount} PENDING\n" +
+            $"  💰 Total Refunds: ${totalRefundAmount:F2} ({approvedCount} claims)\n" +
+            $"  🎯 Refund Breakdown: {megaRefunds} over $1,000 | {majorRefunds} over $500 | {largeRefunds} over $100\n" +
+            $"  🏆 Top 5 Refunds: {string.Join(", ", top5Refunds)}\n" +
+            $"  ⚠️  Anomalies: {anomalousRecords.Count} records\n" +
+            $"  📈 Overpayments Found: {overpaymentRecords.Count} potential refund opportunities"
+        );
         return records;
     }
 

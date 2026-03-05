@@ -275,6 +275,154 @@ public class RefundClaimsController : ControllerBase
             return StatusCode(500, new { error = "Failed to download form" });
         }
     }
+
+    // ─── Supporting Documents Management ──────────────────────────────
+
+    /// <summary>
+    /// Get documents for a claim.
+    /// GET api/refundclaims/123/documents
+    /// </summary>
+    [HttpGet("{id}/documents")]
+    public async Task<ActionResult<List<ClaimDocumentDto>>> GetDocuments(int id)
+    {
+        try
+        {
+            var claim = await _claimService.GetClaimByIdAsync(id);
+            if (claim == null)
+                return NotFound(new { error = $"Claim {id} not found" });
+
+            var docs = ParseDocuments(claim.SupportingDocuments);
+            return Ok(docs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving documents for claim {ClaimId}", id);
+            return StatusCode(500, new { error = "Failed to retrieve documents" });
+        }
+    }
+
+    /// <summary>
+    /// Upload a document for a claim.
+    /// POST api/refundclaims/123/documents
+    /// </summary>
+    [HttpPost("{id}/documents")]
+    public async Task<ActionResult<ClaimDocumentDto>> UploadDocument(int id, IFormFile file)
+    {
+        try
+        {
+            var claim = await _claimService.GetClaimByIdAsync(id);
+            if (claim == null)
+                return NotFound(new { error = $"Claim {id} not found" });
+
+            if (file == null || file.Length == 0)
+                return BadRequest(new { error = "No file provided" });
+
+            // Save the file to wwwroot/uploads/claims/{id}/
+            var uploadsDir = Path.Combine("wwwroot", "uploads", "claims", id.ToString());
+            Directory.CreateDirectory(uploadsDir);
+
+            var safeFileName = $"{Guid.NewGuid():N}_{Path.GetFileName(file.FileName)}";
+            var filePath = Path.Combine(uploadsDir, safeFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var doc = new ClaimDocumentDto
+            {
+                Name = file.FileName,
+                Type = Path.GetExtension(file.FileName).TrimStart('.').ToUpper(),
+                UploadedAt = DateTime.UtcNow,
+                Size = FormatFileSize(file.Length),
+                StoredPath = filePath
+            };
+
+            // Append to SupportingDocuments JSON
+            var docs = ParseDocuments(claim.SupportingDocuments);
+            docs.Add(doc);
+            claim.SupportingDocuments = System.Text.Json.JsonSerializer.Serialize(docs);
+            claim.LastUpdatedDate = DateTime.UtcNow;
+            await _claimService.SaveChangesAsync();
+
+            return Ok(doc);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading document for claim {ClaimId}", id);
+            return StatusCode(500, new { error = "Failed to upload document" });
+        }
+    }
+
+    /// <summary>
+    /// Delete a document from a claim.
+    /// DELETE api/refundclaims/123/documents/0
+    /// </summary>
+    [HttpDelete("{id}/documents/{docIndex}")]
+    public async Task<ActionResult> DeleteDocument(int id, int docIndex)
+    {
+        try
+        {
+            var claim = await _claimService.GetClaimByIdAsync(id);
+            if (claim == null)
+                return NotFound(new { error = $"Claim {id} not found" });
+
+            var docs = ParseDocuments(claim.SupportingDocuments);
+            if (docIndex < 0 || docIndex >= docs.Count)
+                return BadRequest(new { error = "Invalid document index" });
+
+            // Optionally delete the physical file
+            var doc = docs[docIndex];
+            if (!string.IsNullOrEmpty(doc.StoredPath) && System.IO.File.Exists(doc.StoredPath))
+            {
+                System.IO.File.Delete(doc.StoredPath);
+            }
+
+            docs.RemoveAt(docIndex);
+            claim.SupportingDocuments = System.Text.Json.JsonSerializer.Serialize(docs);
+            claim.LastUpdatedDate = DateTime.UtcNow;
+            await _claimService.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting document for claim {ClaimId}", id);
+            return StatusCode(500, new { error = "Failed to delete document" });
+        }
+    }
+
+    // ─── Document Helpers ─────────────────────────────────────────────
+
+    private static List<ClaimDocumentDto> ParseDocuments(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json) || json == "[]")
+            return new List<ClaimDocumentDto>();
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<ClaimDocumentDto>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? new List<ClaimDocumentDto>();
+        }
+        catch
+        {
+            return new List<ClaimDocumentDto>();
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < suffixes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.#} {suffixes[order]}";
+    }
 }
 
 // DTOs
@@ -322,3 +470,12 @@ public record CreateClaimRequest(
     string? InternalNotes = null,
     int? Priority = 3
 );
+
+public class ClaimDocumentDto
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "";
+    public DateTime UploadedAt { get; set; }
+    public string Size { get; set; } = "";
+    public string? StoredPath { get; set; }
+}

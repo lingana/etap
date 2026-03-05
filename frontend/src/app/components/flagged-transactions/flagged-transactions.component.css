@@ -1,3 +1,62 @@
+/* ==================== PAGE HEADER ==================== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--gradient-primary);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-icon {
+  color: #ffffff;
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 4px 0;
+}
+
+.engagement-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
 /* Suggested for Review section */
 .suggested-review-section {
   background: #f0f6ff;
@@ -6,6 +65,98 @@
   padding: 18px 18px 10px 18px;
   margin-bottom: 18px;
   box-shadow: 0 2px 8px rgba(56, 189, 248, 0.08);
+}
+
+/* ======= Mat-Table Styles ======= */
+.mat-table-container {
+  overflow-x: auto;
+}
+
+.transactions-mat-table {
+  width: 100%;
+  min-width: 1100px;
+}
+
+.transactions-mat-table .mat-mdc-header-cell {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.transactions-mat-table .mat-mdc-row {
+  transition: background-color 0.15s ease;
+}
+
+.transactions-mat-table .mat-mdc-row:hover {
+  background-color: rgba(102, 126, 234, 0.06);
+  cursor: pointer;
+}
+
+.transactions-mat-table .mat-mdc-row:nth-child(odd) {
+  background-color: #fafbfc;
+}
+
+.transactions-mat-table .mat-mdc-cell {
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: nowrap;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.transactions-mat-table .actions-cell {
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+/* Risk Score Badge */
+.risk-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.risk-score-badge.risk-high {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.risk-score-badge.risk-medium {
+  background-color: #fefce8;
+  color: #ca8a04;
+  border: 1px solid #fde047;
+}
+
+.risk-score-badge.risk-low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* Mat Paginator */
+::ng-deep .mat-mdc-paginator {
+  border-top: 1px solid #e5e7eb;
+  background: #fafbfc;
+}
+
+/* Header checkbox color override */
+.transactions-mat-table .mat-mdc-header-cell .mat-mdc-checkbox .mdc-checkbox__background {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.text-muted {
+  color: #9ca3af;
 }
 .suggested-title {
   display: flex;
@@ -52,7 +203,13 @@
 .suggested-item button {
   min-width: 110px;
 }
+
 .transactions-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .engagement-label {
   font-weight: 600;
   color: #ffffff;
@@ -286,6 +443,30 @@
   color: #059669;
 }
 
+.summary-item.overpayment {
+  color: #dc2626;
+}
+
+.summary-item.overpayment mat-icon {
+  color: #dc2626;
+}
+
+.summary-item.overpayment strong {
+  color: #dc2626;
+}
+
+.summary-item.underpayment {
+  color: #d97706;
+}
+
+.summary-item.underpayment mat-icon {
+  color: #d97706;
+}
+
+.summary-item.underpayment strong {
+  color: #d97706;
+}
+
 .engagement-label {
   margin-top: 8px !important;
   padding: 8px 12px;
@@ -497,13 +678,35 @@ tr:hover td {
 .badge-under {
   background-color: #fef3c7;
   color: #92400e;
-  border-color: #7dd3fc;
+  border-color: #fcd34d;
+}
+
+.badge-exempt {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.badge-rate-error {
+  background-color: #fce7f3;
+  color: #9d174d;
+  border-color: #f9a8d4;
 }
 
 .badge-unknown {
   background-color: var(--gray-200);
   color: #374151;
   border-color: #e9d5ff;
+}
+
+.claim-type-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+  display: inline-block;
+  border: 1px solid;
+  white-space: nowrap;
 }
 
 .confidence-badge {
@@ -624,25 +827,137 @@ tr:hover td {
   color: var(--text-secondary);
 }
 
-.detail-panel {
+/* Transaction Detail Slide-in Panel */
+.detail-overlay {
   position: fixed;
+  top: 0;
   right: 0;
-  top: 56px;
-  width: 400px;
-  height: calc(100vh - 56px);
-  background: white;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1050;
-  border-left: 4px solid #3b82f6;
-  animation: slideInRight 0.3s ease-out;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  animation: fadeInOverlay 0.2s ease-out;
 }
 
-.detail-panel > app-transaction-detail, .detail-panel > * {
-  flex: 1 1 auto;
-  min-height: 0;
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.detail-panel {
+  background: var(--bg-primary, #fff);
+  width: 65%;
+  max-width: 900px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease-out;
+  position: relative;
+}
+
+.detail-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
+.detail-panel-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-panel-header h4 mat-icon {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 22px;
+}
+
+.detail-panel-header button {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.detail-panel-header button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.detail-status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.status-reviewed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-claimed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.detail-panel-content {
+  flex: 1;
   overflow-y: auto;
+  padding: 0;
+  background: var(--bg-secondary, #f8f9fb);
+  min-height: 0;
+}
+
+/* Custom scrollbar for panel */
+.detail-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.detail-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.detail-panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.detail-panel-content > app-transaction-detail {
+  display: block;
 }
 
 @keyframes slideInRight {
@@ -654,17 +969,10 @@ tr:hover td {
   }
 }
 
-@media (max-width: 1024px) {
-  .detail-panel {
-    width: 350px;
-  }
-}
-
 @media (max-width: 768px) {
   .detail-panel {
     width: 100%;
-    top: 0;
-    height: 100vh;
+    max-width: 100%;
   }
 
   .transactions-container {

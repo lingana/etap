@@ -1,11 +1,23 @@
 <div class="query-container">
-  <button class="close-dialog-btn" mat-icon-button (click)="closeDialog()" aria-label="Close dialog">
-    <mat-icon>close</mat-icon>
-  </button>
+  <!-- Header -->
+  <div class="dialog-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">search</mat-icon>
+      <div>
+        <h3>Natural Language Search</h3>
+        <p class="header-subtitle">Query transactions using plain English</p>
+      </div>
+    </div>
+    <button mat-icon-button (click)="closeDialog()" aria-label="Close dialog" class="close-btn">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Search Input -->
   <div class="query-section">
-    <h3>Natural Language Search</h3>
     <div class="query-input-wrapper">
       <div class="input-container">
+        <mat-icon class="input-icon">psychology</mat-icon>
         <input 
           type="text" 
           class="query-input"
@@ -14,21 +26,28 @@
           (keydown)="onKeyDown($event)"
           (focus)="onQueryInputFocus()"
           (blur)="onQueryInputBlur()"
-          [disabled]="isSearching">
-        <button class="search-btn" (click)="executeQuery()" [disabled]="!userQuery.trim() || isSearching">
-          <span *ngIf="!isSearching">🔍 Search</span>
-          <span *ngIf="isSearching">⟳ Searching...</span>
+          [disabled]="isSearching"
+          aria-label="Natural language query input">
+        <button *ngIf="userQuery" class="clear-btn" (click)="clearQuery()" title="Clear query" aria-label="Clear query">
+          <mat-icon>close</mat-icon>
         </button>
-        <button *ngIf="userQuery" class="clear-btn" (click)="clearQuery()" title="Clear">✕</button>
+        <button mat-raised-button color="primary" class="search-btn" (click)="executeQuery()" [disabled]="!userQuery.trim() || isSearching">
+          <mat-icon *ngIf="!isSearching">search</mat-icon>
+          <mat-spinner *ngIf="isSearching" diameter="18"></mat-spinner>
+          <span>{{ isSearching ? 'Searching...' : 'Search' }}</span>
+        </button>
       </div>
 
       <!-- Suggested Queries Dropdown -->
       <div *ngIf="showSuggestions && suggestedQueries.length > 0" class="suggestions-dropdown">
-        <div class="suggestions-header">Suggested Queries:</div>
+        <div class="suggestions-header">
+          <mat-icon class="suggestions-header-icon">lightbulb</mat-icon>
+          Suggested Queries
+        </div>
         <button *ngFor="let suggestion of suggestedQueries" 
                 class="suggestion-item"
-                (click)="selectSuggestedQuery(suggestion)">
-          <span class="suggestion-icon">💡</span>
+                (mousedown)="selectSuggestedQuery(suggestion)">
+          <mat-icon class="suggestion-icon">arrow_forward</mat-icon>
           <span class="suggestion-text">{{ suggestion }}</span>
         </button>
       </div>
@@ -37,81 +56,121 @@
 
   <!-- Loading State -->
   <div *ngIf="isSearching" class="search-loading">
-    <div class="spinner"></div>
+    <mat-spinner diameter="36"></mat-spinner>
     <p>Searching transactions...</p>
   </div>
 
   <!-- Error State -->
   <div *ngIf="!isSearching && hasError" class="search-error">
-    <mat-icon class="error-icon">warning</mat-icon>
+    <mat-icon class="error-icon">error_outline</mat-icon>
     <div>
       <p class="error-message">{{ errorMessage }}</p>
-      <button class="retry-btn" (click)="executeQuery()">Try Again</button>
+      <button mat-stroked-button color="warn" (click)="executeQuery()" class="retry-btn">
+        <mat-icon>refresh</mat-icon>
+        Try Again
+      </button>
     </div>
   </div>
 
   <!-- Results -->
   <div *ngIf="!isSearching && !hasError && queryResults.length > 0" class="results-section">
     <div class="results-header">
-      <span class="results-count">Found {{ queryResults.length }} transactions</span>
-      <button class="export-btn" (click)="exportResults()" title="Export to CSV">
-        📥 Export
+      <span class="results-count">
+        <mat-icon class="results-icon">fact_check</mat-icon>
+        Found <strong>{{ queryResults.length }}</strong> transactions
+      </span>
+      <button mat-stroked-button (click)="exportResults()" title="Export to CSV" class="export-btn">
+        <mat-icon>download</mat-icon>
+        Export CSV
       </button>
     </div>
 
-    <div class="results-table-wrapper">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>Transaction #</th>
-            <th>Merchant</th>
-            <th>State</th>
-            <th>Date</th>
-            <th>Price/Unit</th>
-            <th>Anomaly Score</th>
-            <th>Claim Type</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let transaction of queryResults | slice: (pageNumber-1)*pageSize : pageNumber*pageSize" 
-              class="result-row"
-              [class.high-anomaly]="transaction.anomalyScore > 0.8">
-            <td class="txn-number">{{ transaction.transactionNumber }}</td>
-            <td class="merchant-name">{{ transaction.merchantName }}</td>
-            <td class="state">{{ transaction.merchantState }}</td>
-            <td class="date">{{ transaction.transactionDate | date: 'MMM dd, yyyy' }}</td>
-            <td class="price">${{ transaction.pricePerUnit | number: '1.2-4' }}</td>
-            <td class="anomaly-score">
-              <span class="score-badge" [class.critical]="transaction.anomalyScore > 0.8">
-                {{ transaction.anomalyScore | number: '1.3' }}
-              </span>
-            </td>
-            <td class="claim-type" [class]="transaction.predictedClaimType.toLowerCase()">
-              {{ transaction.predictedClaimType }}
-            </td>
-          </tr>
-        </tbody>
+    <div class="mat-table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="results-mat-table">
+
+        <!-- Transaction # Column -->
+        <ng-container matColumnDef="transactionNumber">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Txn #</th>
+          <td mat-cell *matCellDef="let row" class="txn-number">{{ row.transactionNumber }}</td>
+        </ng-container>
+
+        <!-- Merchant Column -->
+        <ng-container matColumnDef="merchantName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Merchant</th>
+          <td mat-cell *matCellDef="let row">{{ row.merchantName }}</td>
+        </ng-container>
+
+        <!-- State Column -->
+        <ng-container matColumnDef="merchantState">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>State</th>
+          <td mat-cell *matCellDef="let row" class="state-cell">{{ row.merchantState }}</td>
+        </ng-container>
+
+        <!-- Date Column -->
+        <ng-container matColumnDef="transactionDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+          <td mat-cell *matCellDef="let row">{{ row.transactionDate | date: 'MM/dd/yy' }}</td>
+        </ng-container>
+
+        <!-- Amount Column -->
+        <ng-container matColumnDef="netCost">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
+          <td mat-cell *matCellDef="let row" class="numeric">{{ row.netCost | currency }}</td>
+        </ng-container>
+
+        <!-- Tax Paid Column -->
+        <ng-container matColumnDef="totalTaxAmount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Tax Paid</th>
+          <td mat-cell *matCellDef="let row" class="numeric">
+            {{ row.totalTaxAmount > 0 ? (row.totalTaxAmount | currency) : '-' }}
+          </td>
+        </ng-container>
+
+        <!-- Anomaly Score Column -->
+        <ng-container matColumnDef="anomalyScore">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Score</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="score-badge" [ngClass]="getScoreClass(row.anomalyScore)">
+              {{ (row.anomalyScore * 100) | number:'1.0-0' }}%
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Claim Type Column -->
+        <ng-container matColumnDef="predictedClaimType">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="claim-type-badge" [ngClass]="getClaimTypeClass(row.predictedClaimType)">
+              {{ getClaimTypeLabel(row.predictedClaimType) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Header and Row Declarations -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.high-anomaly]="row.anomalyScore > 0.8">
+        </tr>
       </table>
-    </div>
 
-    <!-- Pagination -->
-    <div *ngIf="queryResults.length > pageSize" class="pagination">
-      <button (click)="pageNumber = pageNumber - 1" [disabled]="pageNumber === 1">← Previous</button>
-      <span class="page-info">Page {{ pageNumber }} of {{ (queryResults.length + pageSize - 1) / pageSize | number: '1.0-0' }}</span>
-      <button (click)="pageNumber = pageNumber + 1" [disabled]="pageNumber * pageSize >= queryResults.length">Next →</button>
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]"
+                     [pageSize]="10"
+                     showFirstLastButtons>
+      </mat-paginator>
     </div>
   </div>
 
-  <!-- Empty State -->
+  <!-- No Results State -->
   <div *ngIf="!isSearching && !hasError && queryResults.length === 0 && userQuery" class="no-results">
-    <span class="empty-icon">🔍</span>
-    <p>No transactions found matching your query.</p>
-    <p class="hint">Try a different search or use one of the suggested queries.</p>
+    <mat-icon class="empty-icon">search_off</mat-icon>
+    <p class="empty-title">No transactions found</p>
+    <p class="hint">Try a different search or use one of the suggested queries</p>
   </div>
 
+  <!-- Initial Empty State -->
   <div *ngIf="!isSearching && !hasError && queryResults.length === 0 && !userQuery" class="empty-state">
-    <span class="empty-icon">🔍</span>
-    <p>Search for transactions using natural language</p>
+    <mat-icon class="empty-icon">manage_search</mat-icon>
+    <p class="empty-title">Search transactions using natural language</p>
     <p class="hint">Type in the search box or select a suggestion to get started</p>
   </div>
 </div>

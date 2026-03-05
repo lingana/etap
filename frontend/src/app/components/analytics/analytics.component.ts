@@ -1,13 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ChartConfiguration } from 'chart.js';
+import * as Plotly from 'plotly.js-dist-min';
 import { AuditService } from '../../services/audit.service';
 import { ToastService } from '../../services/toast.service';
 import { TaxClientService } from '../../services/tax-client.service';
 import { PowerBIService } from '../../services/powerbi.service';
 import { Engagement } from '../../models/tax-client.model';
-
-declare var Plotly: any;
 
 interface StateData {
   code: string;
@@ -42,11 +42,12 @@ interface AIReportInsights {
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.css']
 })
-export class AnalyticsComponent implements OnInit {
+export class AnalyticsComponent implements OnInit, OnDestroy {
   isLoading = false;
   stats: any = null;
   isPowerBIConfigured = false;
   aiReportInsights: AIReportInsights | null = null;
+  private subscriptions: Subscription[] = [];
   
   constructor(
     private auditService: AuditService, 
@@ -211,9 +212,20 @@ export class AnalyticsComponent implements OnInit {
     this.initializePowerBI();
     
     // Subscribe to upload completion event to auto-refresh
-    this.auditService.uploadCompleted$.subscribe(() => {
-      this.loadAnalytics();
-    });
+    this.subscriptions.push(
+      this.auditService.uploadCompleted$.subscribe(() => {
+        this.loadAnalytics();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
+    // Clean up Plotly to prevent memory leaks
+    const mapEl = document.getElementById('plotly-map');
+    if (mapEl && typeof (Plotly as any).purge === 'function') {
+      (Plotly as any).purge(mapEl);
+    }
   }
 
   /**
@@ -636,7 +648,7 @@ export class AnalyticsComponent implements OnInit {
 
     const mapElement = document.getElementById('plotly-map');
     if (mapElement) {
-      Plotly.newPlot('plotly-map', data, layout, config);
+      (Plotly as any).newPlot(mapElement, data, layout, config);
     }
   }
 

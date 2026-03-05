@@ -68,20 +68,49 @@ export class TransactionDetailComponent implements OnInit {
   initializeForm(): void {
     this.reviewForm = this.formBuilder.group({
       decision: ['', Validators.required],
-      status: ['', Validators.required],
+      status: ['PENDING', Validators.required],
       notes: [''],
       adjustmentAmount: [0, Validators.min(0)]
     });
 
+    // Always pre-populate form with existing transaction data
+    const currentStatus = this.mapStatusToDropdown(this.transaction.status);
     if (this.transaction.isReviewed) {
       this.reviewForm.patchValue({
         decision: this.mapAIRecommendationToDropdown(this.transaction.predictedClaimType),
-        status: this.transaction.status || 'PENDING',
+        status: currentStatus,
         notes: this.transaction.auditorNotes,
-        adjustmentAmount: 0
+        adjustmentAmount: this.transaction.adjustmentAmount ?? 0
       });
+    } else if (currentStatus !== 'PENDING') {
+      // Transaction has a status from AI review but isn't manually reviewed yet
+      this.reviewForm.patchValue({ status: currentStatus });
     }
+  }
 
+  /**
+   * Maps a raw status value to a valid dropdown option.
+   * Handles legacy/corrupted values from older data.
+   */
+  mapStatusToDropdown(status: string | undefined): string {
+    const normalized = (status || '').toUpperCase();
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REVIEWED', 'CLAIMED'];
+    if (validStatuses.includes(normalized)) {
+      return normalized;
+    }
+    // Map legacy decision-based status to proper status
+    switch (normalized) {
+      case 'OVER':
+      case 'UNDER':
+        return 'REVIEWED';
+      case 'OK':
+        return 'APPROVED';
+      case 'FLAGGED':
+      case '':
+        return 'PENDING';
+      default:
+        return 'PENDING';
+    }
   }
 
   /**

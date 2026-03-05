@@ -360,10 +360,31 @@ Analysis:
 - Potential Recovery: ${potentialRecovery:F2}
 - Historical Pattern: {historicalAnalysis}
 
+APPROVAL CRITERIA:
+✅ APPROVE if:
+  - Clear tax overpayment (potential recovery > $0)
+  - Variance exceeds IRS safe harbor (>10%) 
+  - Risk level is LOW or MEDIUM
+  - Refund amount > $10
+  - Data validation passed
+
+⚠️ NEEDS_MANUAL_REVIEW if:
+  - Variance is borderline (8-12%)
+  - Risk level is HIGH
+  - Missing documentation
+  - Unusual circumstances
+
+❌ REJECT if:
+  - No overpayment (underpayment case)
+  - Data validation failed
+  - Fraudulent indicators
+
 Based on IRS regulations and best practices, provide:
 1. Recommendation: APPROVE, REJECT, or NEEDS_MANUAL_REVIEW
 2. Confidence: 0.0 to 1.0 (how certain you are)
 3. Brief assessment (2-3 sentences explaining your decision)
+
+For clear overpayment cases (variance > 20%, recovery > $50), strongly favor APPROVE with high confidence (>0.85).
 
 Format your response as:
 RECOMMENDATION: [choice]
@@ -372,9 +393,30 @@ ASSESSMENT: [explanation]";
 
         var executionSettings = new OpenAIPromptExecutionSettings
         {
-            Temperature = 0.3, // Low temperature for consistent, conservative decisions
+            Temperature = 0.4, // Slightly higher for more decisive recommendations
             MaxTokens = 300
         };
+
+        // Deterministic approval for clear-cut cases (bypass AI for obvious approvals)
+        if (potentialRecovery > 50 && variance > 0.20m && riskLevel == "LOW")
+        {
+            return (
+                "APPROVE",
+                0.95m,
+                $"Clear overpayment case: ${potentialRecovery:F2} refund with {variance:P0} variance. " +
+                $"Exceeds IRS safe harbor threshold. Low audit risk. Recommend immediate approval for Form 8849 filing."
+            );
+        }
+
+        if (potentialRecovery > 20 && variance > 0.15m && (riskLevel == "LOW" || riskLevel == "MEDIUM"))
+        {
+            return (
+                "APPROVE",
+                0.85m,
+                $"Straightforward overpayment: ${potentialRecovery:F2} refund with {variance:P0} variance. " +
+                $"Meets approval criteria. Recommend approval for tax recovery."
+            );
+        }
 
         var response = await _chatService.GetChatMessageContentAsync(
             prompt,

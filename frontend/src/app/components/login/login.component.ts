@@ -33,6 +33,11 @@ export class LoginComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loginForm = this.formBuilder.group({
+      username: ['', Validators.required],
+      password: ['', Validators.required]
+    });
+
     // Redirect to dashboard if already logged in
     if (this.authService.isAuthenticated()) {
       this.loginSuccess.emit();
@@ -40,11 +45,6 @@ export class LoginComponent implements OnInit {
     }
 
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/tax-selection';
-
-    this.loginForm = this.formBuilder.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required]
-    });
   }
 
   onSubmit(): void {
@@ -61,6 +61,7 @@ export class LoginComponent implements OnInit {
         if (response.success) {
           // Save login time for token expiration tracking
           localStorage.setItem('login_time', Date.now().toString());
+          this.isLoading = false;
           this.toastService.success(`Welcome, ${response.user?.fullName}!`);
           this.loginSuccess.emit(); // Emit event instead of navigating
         } else {

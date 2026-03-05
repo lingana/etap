@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuditTrailService } from '../../services/audit-trail.service';
+import { ToastService } from '../../services/toast.service';
 
 export interface AuditLog {
   id: number;
@@ -44,6 +45,7 @@ export class ActivityLogComponent implements OnInit {
   logs: AuditLog[] = [];
   engagementId: number = 0;
   isLoading = true;
+  isExporting = false;
   aiAnalysis: AIActivityAnalysis | null = null;
   
   // Filters
@@ -57,7 +59,8 @@ export class ActivityLogComponent implements OnInit {
   
   constructor(
     private route: ActivatedRoute,
-    private auditTrailService: AuditTrailService
+    private auditTrailService: AuditTrailService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -75,6 +78,7 @@ export class ActivityLogComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('Failed to load activity logs', error);
+        this.toastService.error('Failed to load activity logs');
         this.isLoading = false;
       }
     });
@@ -190,8 +194,7 @@ export class ActivityLogComponent implements OnInit {
   }
 
   applyFilters(): void {
-    // Filtered logs computed property can be added
-    this.loadActivityLogs();
+    // Filters are applied client-side via filteredLogs getter — no API reload needed
   }
 
   clearFilters(): void {
@@ -203,6 +206,7 @@ export class ActivityLogComponent implements OnInit {
   }
 
   exportLogs(): void {
+    this.isExporting = true;
     this.auditTrailService.exportLogs(this.engagementId).subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -211,9 +215,13 @@ export class ActivityLogComponent implements OnInit {
         link.download = `ActivityLog_${this.engagementId}_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
         window.URL.revokeObjectURL(url);
+        this.isExporting = false;
+        this.toastService.success('Activity log exported successfully');
       },
       error: (error: any) => {
         console.error('Failed to export logs', error);
+        this.toastService.error('Failed to export activity log');
+        this.isExporting = false;
       }
     });
   }

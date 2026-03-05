@@ -83,7 +83,8 @@ public class TransactionsController : ControllerBase
                     Status = record.Status,
                     ReviewedBy = record.ReviewedBy,
                     ReviewedAt = record.ReviewedDate,
-                    ClaimAmount = Math.Abs(record.TotalTaxAmount - expectedTax)
+                    ClaimAmount = Math.Abs(record.TotalTaxAmount - expectedTax),
+                    AdjustmentAmount = record.Label_AdjustmentAmount
                 };
                 dtos.Add(dto);
             }
@@ -139,7 +140,12 @@ public class TransactionsController : ControllerBase
                 Confidence = record.Confidence,
                 ExplanationText = record.GenAIExplanation ?? explanation,
                 IsReviewed = record.IsReviewed,
-                AuditorNotes = record.AuditorNotes
+                AuditorNotes = record.AuditorNotes,
+                Status = record.Status,
+                ReviewedBy = record.ReviewedBy,
+                ReviewedAt = record.ReviewedDate,
+                ClaimAmount = Math.Abs(record.TotalTaxAmount - expectedTax),
+                AdjustmentAmount = record.Label_AdjustmentAmount
             };
 
             return Ok(dto);
@@ -172,7 +178,8 @@ public class TransactionsController : ControllerBase
             record.IsReviewed = true;
             record.AuditorNotes = request.Notes;
             record.Label_OverUnder = request.Decision;
-            record.Status = request.Decision; // Update Status field based on decision
+            // Use explicit Status if provided; otherwise default to "REVIEWED"
+            record.Status = !string.IsNullOrEmpty(request.Status) ? request.Status : "REVIEWED";
             record.ReviewedBy = "Auditor"; // Default value, can be updated from auth context
             record.ReviewedDate = DateTime.UtcNow;
             if (request.AdjustmentAmount.HasValue)
@@ -287,7 +294,10 @@ public class TransactionsController : ControllerBase
                     ExpectedTaxAmount = expectedTax,
                     TaxDifference = record.TotalTaxAmount - expectedTax,
                     IsReviewed = record.IsReviewed,
-                    AuditorNotes = record.AuditorNotes
+                    AuditorNotes = record.AuditorNotes,
+                    Status = record.Status,
+                    ClaimAmount = Math.Abs(record.TotalTaxAmount - expectedTax),
+                    AdjustmentAmount = record.Label_AdjustmentAmount
                 };
                 dtos.Add(dto);
             }
@@ -434,6 +444,7 @@ public class ReviewRequest
     public string? Decision { get; set; } // "OVER", "UNDER", "OK"
     public string? Notes { get; set; }
     public decimal? AdjustmentAmount { get; set; }
+    public string? Status { get; set; } // "PENDING", "APPROVED", "REJECTED", "REVIEWED", "CLAIMED"
 }
 
 /// <summary>

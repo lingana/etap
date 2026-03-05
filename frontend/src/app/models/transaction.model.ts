@@ -1,3 +1,11 @@
+export enum TransactionStatus {
+  Flagged = 'FLAGGED',
+  Reviewed = 'REVIEWED',
+  Approved = 'APPROVED',
+  Rejected = 'REJECTED',
+  Claimed = 'CLAIMED'
+}
+
 export interface TransactionRecord {
   recordID: number;
   transactionNumber: string;
@@ -34,6 +42,7 @@ export interface FlaggedTransaction {
   auditorNotes?: string;
   status?: string;
   claimAmount?: number;
+  adjustmentAmount?: number;
   reviewedBy?: string;
   reviewedAt?: string;
   approvedBy?: string;

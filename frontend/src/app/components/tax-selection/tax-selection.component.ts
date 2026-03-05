@@ -71,8 +71,8 @@ export class TaxSelectionComponent implements OnInit {
   newEngagementForm = {
     engagementName: '',
     fiscalYear: new Date().getFullYear(),
-    fiscalYearStart: new Date(new Date().getFullYear(), 0, 1),
-    fiscalYearEnd: new Date(new Date().getFullYear(), 11, 31),
+    fiscalYearStart: `${new Date().getFullYear()}-01-01`,
+    fiscalYearEnd: `${new Date().getFullYear()}-12-31`,
     engagementType: 'FullAudit',
     description: ''
   };
@@ -210,6 +210,8 @@ export class TaxSelectionComponent implements OnInit {
     this.engagementSearchTerm = '';
     this.loadClients(taxType.id);
     this.taxClientService.setSelectedTaxType(taxType);
+    this.taxClientService.setSelectedClient(null);
+    this.taxClientService.setSelectedEngagement(null);
   }
 
   loadClients(taxTypeId: number): void {
@@ -237,6 +239,7 @@ export class TaxSelectionComponent implements OnInit {
     this.engagementStatusFilter = 'all';
     this.loadEngagements(client.id);
     this.taxClientService.setSelectedClient(client);
+    this.taxClientService.setSelectedEngagement(null);
   }
 
   loadEngagements(clientId: number): void {
@@ -349,8 +352,6 @@ export class TaxSelectionComponent implements OnInit {
   selectEngagement(engagement: Engagement): void {
     this.selectedEngagement = engagement;
     this.taxClientService.setSelectedEngagement(engagement);
-    this.toastService.success(`Selected engagement: ${engagement.engagementName}`);
-    this.proceedToDashboard();
   }
 
   proceedToDashboard(): void {
@@ -438,7 +439,9 @@ export class TaxSelectionComponent implements OnInit {
 
     const request = {
       ...this.newEngagementForm,
-      clientId: this.selectedClient.id
+      clientId: this.selectedClient.id,
+      fiscalYearStart: new Date(this.newEngagementForm.fiscalYearStart),
+      fiscalYearEnd: new Date(this.newEngagementForm.fiscalYearEnd)
     };
 
     this.taxClientService.createEngagement(request).subscribe(
@@ -474,8 +477,8 @@ export class TaxSelectionComponent implements OnInit {
     this.newEngagementForm = {
       engagementName: '',
       fiscalYear: currentYear,
-      fiscalYearStart: new Date(currentYear, 0, 1),
-      fiscalYearEnd: new Date(currentYear, 11, 31),
+      fiscalYearStart: `${currentYear}-01-01`,
+      fiscalYearEnd: `${currentYear}-12-31`,
       engagementType: 'FullAudit',
       description: ''
     };

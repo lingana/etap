@@ -89,6 +89,11 @@ app-root {
   --border-medium: #cbd5e1;
   --border-color: #e2e8f0;
   
+  /* Aliases for components that reference short names */
+  --border: #e2e8f0;
+  --background-light: #f8fafc;
+  --secondary-lighter: #fce4ff;
+  
   /* Legacy color variables for backward compatibility */
   --primary-color: var(--primary);
   --success-color: var(--success);
@@ -536,6 +541,17 @@ button:hover mat-icon {
   z-index: 9999 !important;
 }
 
+/* NLQ dialog: remove default padding so the component header goes edge-to-edge */
+.nlq-dialog-panel .mat-mdc-dialog-surface {
+  padding: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.nlq-dialog-panel .query-container {
+  padding: 24px;
+}
+
 .mat-mdc-dialog-container .mat-mdc-dialog-title {
   margin-bottom: 16px !important;
 }
@@ -660,36 +676,7 @@ hr {
   margin: 16px 0;
 }
 
-/* Table Enhancements */
-.mat-mdc-table {
-  background-color: var(--bg-primary);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: none;
-  border: 1px solid var(--border-light);
-}
-
-.mat-mdc-header-cell {
-  background: linear-gradient(135deg, #f3f4f6 0%, #eff6ff 100%);
-  font-weight: 700;
-  color: var(--gray-800);
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  padding: 16px;
-  border: none;
-}
-
-.mat-mdc-cell {
-  padding: 16px;
-  border-bottom: 1px solid var(--gray-200);
-  transition: all 0.2s ease;
-}
-
-.mat-mdc-row:hover {
-  background-color: var(--gray-50);
-}
-
+/* Table Enhancements — overrides already defined above, keep row hover */
 .mat-mdc-row:hover .mat-mdc-cell {
   background-color: inherit;
 }
@@ -740,32 +727,32 @@ pre {
 
 /* Shadow Utilities */
 .shadow-sm {
-  box-shadow: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .shadow {
-  box-shadow: none;
+  box-shadow: var(--shadow-md);
 }
 
 .shadow-md {
-  box-shadow: none;
+  box-shadow: var(--shadow-md);
 }
 
 .shadow-lg {
-  box-shadow: none;
+  box-shadow: var(--shadow-lg);
 }
 
 .shadow-xl {
-  box-shadow: none;
+  box-shadow: var(--shadow-xl);
 }
 
 /* Opacity Utilities */
 .opacity-50 {
-  opacity: 1;
+  opacity: 0.5;
 }
 
 .opacity-75 {
-  opacity: 1;
+  opacity: 0.75;
 }
 
 .opacity-disabled {

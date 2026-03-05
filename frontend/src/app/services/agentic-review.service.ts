@@ -69,8 +69,9 @@ export class AgenticReviewService {
     return this.http.post<AgenticReviewResult>(`${this.apiUrl}/review/${recordId}`, payload);
   }
 
-  batchReview(recordIds: number[]): Observable<BatchReviewResponse> {
-    return this.http.post<BatchReviewResponse>(`${this.apiUrl}/batch-review`, recordIds);
+  batchReview(recordIds: number[], engagementId?: number): Observable<BatchReviewResponse> {
+    const params = engagementId ? `?engagementId=${engagementId}` : '';
+    return this.http.post<BatchReviewResponse>(`${this.apiUrl}/batch-review${params}`, recordIds);
   }
 
   reviewFlaggedTransactions(engagementId: number, minScore: number = 0.5, maxTransactions: number = 50): Observable<BatchReviewResponse> {

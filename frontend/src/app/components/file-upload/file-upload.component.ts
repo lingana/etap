@@ -166,6 +166,12 @@ export class FileUploadComponent {
       return;
     }
 
+    if (!this.getSelectedEngagement()) {
+      this.errorMessage = 'Please select an engagement before uploading.';
+      this.toastService.warning('No engagement selected. Please select a client and engagement first.');
+      return;
+    }
+
     this.isUploading = true;
     this.uploadProgress = 0;
 
@@ -203,7 +209,10 @@ export class FileUploadComponent {
 
   getDateRange(): string {
     if (this.previewData.length === 0) return '';
-    const dates = this.previewData.map(d => new Date(d.transactionDate));
+    const dates = this.previewData
+      .map(d => d.transactionDate ? new Date(d.transactionDate) : null)
+      .filter((d): d is Date => d !== null && !isNaN(d.getTime()));
+    if (dates.length === 0) return 'N/A';
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
     return `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;

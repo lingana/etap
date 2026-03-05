@@ -32,6 +32,46 @@
         <mat-icon *ngIf="isAILoading" class="rotating">refresh</mat-icon>
       </button>
 
+      <!-- Notification Bell -->
+      <div class="notification-wrapper">
+        <button mat-icon-button class="notification-btn" (click)="toggleNotificationPanel()"
+          [attr.aria-label]="'Notifications (' + unreadCount + ' unread)'">
+          <mat-icon>notifications</mat-icon>
+          <span class="notification-badge" *ngIf="unreadCount > 0">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+        </button>
+
+        <!-- Notification Dropdown Panel -->
+        <div class="notification-panel" *ngIf="showNotificationPanel" (click)="$event.stopPropagation()">
+          <div class="notification-panel-header">
+            <h4>Notifications</h4>
+            <button mat-button *ngIf="unreadCount > 0" (click)="markAllNotificationsRead()" class="mark-all-btn">
+              Mark all read
+            </button>
+          </div>
+          <div class="notification-list" *ngIf="notifications.length > 0">
+            <div *ngFor="let notif of notifications.slice(0, 20)" 
+                 class="notification-item" [class.unread]="!notif.read"
+                 (click)="markNotificationRead(notif.id)">
+              <mat-icon class="notif-icon" [style.color]="getNotificationColor(notif.type)">
+                {{ getNotificationIcon(notif.type) }}
+              </mat-icon>
+              <div class="notif-content">
+                <p class="notif-title">{{ notif.title }}</p>
+                <p class="notif-message">{{ notif.message }}</p>
+                <span class="notif-time">{{ notif.timestamp | date:'short' }}</span>
+              </div>
+              <button mat-icon-button class="notif-dismiss" (click)="removeNotification(notif.id); $event.stopPropagation()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div *ngIf="notifications.length === 0" class="notification-empty">
+            <mat-icon>notifications_none</mat-icon>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+      </div>
+
       <!-- User Account Menu -->
       <button mat-icon-button disableRipple class="user-account-btn" [matMenuTriggerFor]="userMenu"
         [attr.aria-label]="'User account menu for {{ currentUser?.fullName || \'User\' }}'">
@@ -67,7 +107,7 @@
   <aside class="sidebar" role="navigation" aria-label="Main navigation" 
     [class.collapsed]="sidebarCollapsed" [class.open]="sidebarOpen">
     <nav class="sidebar-nav" aria-label="Primary">
-      <!-- Core Workflow -->
+      <!-- Overview -->
       <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/overview" routerLinkActive="active"
         [attr.aria-label]="'Overview'"
@@ -75,6 +115,11 @@
         <mat-icon>home</mat-icon>
         <span class="nav-label" *ngIf="!sidebarCollapsed">Overview</span>
       </button>
+
+      <!-- ── Audit Workflow ── -->
+      <div class="nav-group-label" *ngIf="!sidebarCollapsed">AUDIT WORKFLOW</div>
+      <div class="nav-group-divider" *ngIf="sidebarCollapsed"></div>
+
       <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/upload" routerLinkActive="active"
         [attr.aria-label]="'Upload Data'"
@@ -90,11 +135,30 @@
         <span class="nav-label" *ngIf="!sidebarCollapsed">Flagged Items</span>
       </button>
       <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/duplicates" routerLinkActive="active"
+        [attr.aria-label]="'Duplicate Detection'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>content_copy</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Duplicate Detection</span>
+      </button>
+
+      <!-- ── Claims & Recovery ── -->
+      <div class="nav-group-label" *ngIf="!sidebarCollapsed">CLAIMS & RECOVERY</div>
+      <div class="nav-group-divider" *ngIf="sidebarCollapsed"></div>
+
+      <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/refund-claims" routerLinkActive="active"
         [attr.aria-label]="'Refund Claims'"
         [class.only-icon]="sidebarCollapsed">
         <mat-icon>request_quote</mat-icon>
         <span class="nav-label" *ngIf="!sidebarCollapsed">Refund Claims</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/deadlines" routerLinkActive="active"
+        [attr.aria-label]="'Filing Deadlines'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>schedule</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Filing Deadlines</span>
       </button>
       <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/recovery" routerLinkActive="active"
@@ -104,16 +168,23 @@
         <span class="nav-label" *ngIf="!sidebarCollapsed">Recovery Dashboard</span>
       </button>
 
-      <!-- Divider between nav groups -->
-      <div class="nav-group-divider"></div>
+      <!-- ── Reporting ── -->
+      <div class="nav-group-label" *ngIf="!sidebarCollapsed">REPORTING</div>
+      <div class="nav-group-divider" *ngIf="sidebarCollapsed"></div>
 
-      <!-- Analysis & Monitoring -->
       <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/analytics" routerLinkActive="active"
-        [attr.aria-label]="'Reports & Analytics'"
+        [attr.aria-label]="'Analytics'"
         [class.only-icon]="sidebarCollapsed">
         <mat-icon>bar_chart</mat-icon>
-        <span class="nav-label" *ngIf="!sidebarCollapsed">Reports</span>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Analytics</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/report" routerLinkActive="active"
+        [attr.aria-label]="'Engagement Report'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>summarize</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Engagement Report</span>
       </button>
       <button mat-button disableRipple class="nav-item" 
         routerLink="/dashboard/activity" routerLinkActive="active"
@@ -122,12 +193,41 @@
         <mat-icon>history</mat-icon>
         <span class="nav-label" *ngIf="!sidebarCollapsed">Activity Log</span>
       </button>
+
+      <!-- ── Administration ── -->
+      <div class="nav-group-label" *ngIf="!sidebarCollapsed">ADMINISTRATION</div>
+      <div class="nav-group-divider" *ngIf="sidebarCollapsed"></div>
+
       <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/portfolio" routerLinkActive="active"
+        [attr.aria-label]="'Client Portfolio'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>dashboard</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Client Portfolio</span>
+      </button>
+      <button mat-button disableRipple class="nav-item" 
+        routerLink="/dashboard/team" routerLinkActive="active"
+        [attr.aria-label]="'Team Management'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>group</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Team</span>
+      </button>
+      <button mat-button disableRipple class="nav-item"
         routerLink="/dashboard/systems" routerLinkActive="active"
         [attr.aria-label]="'System Status'"
         [class.only-icon]="sidebarCollapsed">
         <mat-icon>hub</mat-icon>
         <span class="nav-label" *ngIf="!sidebarCollapsed">System Status</span>
+      </button>
+
+      <!-- Switch Engagement -->
+      <div class="nav-group-divider"></div>
+      <button mat-button disableRipple class="nav-item switch-engagement"
+        (click)="switchEngagement()"
+        [attr.aria-label]="'Switch Engagement'"
+        [class.only-icon]="sidebarCollapsed">
+        <mat-icon>swap_horiz</mat-icon>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Switch Engagement</span>
       </button>
     </nav>
 

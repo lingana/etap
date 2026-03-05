@@ -1,5 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription, forkJoin } from 'rxjs';
 import { AuditService } from '../../services/audit.service';
+import { RefundClaimService } from '../../services/refund-claim.service';
+import { TaxClientService } from '../../services/tax-client.service';
 import { ToastService } from '../../services/toast.service';
 
 @Component({
@@ -7,26 +10,42 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './audit-review.component.html',
   styleUrls: ['./audit-review.component.css']
 })
-export class AuditReviewComponent implements OnInit {
+export class AuditReviewComponent implements OnInit, OnDestroy {
+  private subscriptions: Subscription[] = [];
   isLoading = false;
   reviewStats: any = null;
 
-  constructor(private auditService: AuditService, private toastService: ToastService) { }
+  constructor(
+    private auditService: AuditService,
+    private refundClaimService: RefundClaimService,
+    private taxClientService: TaxClientService,
+    private toastService: ToastService
+  ) { }
 
   ngOnInit(): void {
     this.loadReviewStats();
     
     // Subscribe to upload completion event to auto-refresh
-    this.auditService.uploadCompleted$.subscribe(() => {
-      this.loadReviewStats();
-    });
+    this.subscriptions.push(
+      this.auditService.uploadCompleted$.subscribe(() => {
+        this.loadReviewStats();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   loadReviewStats(): void {
     this.isLoading = true;
-    this.auditService.getDashboardStats().subscribe(
-      (data) => {
-        // Transform dashboard stats into review stats
+    const engagementId = this.taxClientService.getSelectedEngagement()?.id;
+
+    forkJoin({
+      dashboardStats: this.auditService.getDashboardStats(),
+      claimSummary: this.refundClaimService.getSummary(engagementId)
+    }).subscribe(
+      ({ dashboardStats: data, claimSummary: summary }) => {
         this.reviewStats = {
           totalReviewed: data.reviewedRecords || 0,
           totalPending: (data.flaggedRecords || 0) - (data.reviewedRecords || 0),
@@ -35,8 +54,8 @@ export class AuditReviewComponent implements OnInit {
             ? ((data.reviewedRecords || 0) / data.flaggedRecords) * 100 
             : 0,
           recoveryAmount: data.potentialRecovery || 0,
-          claimsApproved: Math.floor((data.reviewedRecords || 0) * 0.6),
-          claimsPending: Math.floor((data.reviewedRecords || 0) * 0.4)
+          claimsApproved: summary.approvedClaims || 0,
+          claimsPending: summary.draftClaims + summary.submittedClaims || 0
         };
         this.isLoading = false;
       },

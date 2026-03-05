@@ -298,6 +298,14 @@ public class RefundClaimService
     }
 
     /// <summary>
+    /// Persist any tracked entity changes (used by controller for document updates).
+    /// </summary>
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
     /// Generate IRS Form 8849 PDF
     /// </summary>
     public async Task<string> GenerateForm8849Async(int claimId)

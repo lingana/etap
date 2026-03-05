@@ -1,0 +1,169 @@
+<div class="portfolio-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1><mat-icon class="header-icon">account_balance</mat-icon> Client Portfolio</h1>
+        <p class="header-subtitle">Cross-engagement overview of all clients and recovery performance</p>
+      </div>
+      <button mat-raised-button color="primary" (click)="loadPortfolio()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Loading portfolio data...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-stroked-button color="primary" (click)="loadPortfolio()">Retry</button>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && !error">
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <mat-icon class="kpi-icon clients">business</mat-icon>
+        <div class="kpi-value">{{ totalClients }}</div>
+        <div class="kpi-label">Total Clients</div>
+      </div>
+      <div class="kpi-card">
+        <mat-icon class="kpi-icon engagements">assignment</mat-icon>
+        <div class="kpi-value">{{ totalEngagements }}</div>
+        <div class="kpi-label">Engagements</div>
+      </div>
+      <div class="kpi-card">
+        <mat-icon class="kpi-icon recovery">payments</mat-icon>
+        <div class="kpi-value">{{ totalRecovery | currency:'USD':'symbol':'1.0-0' }}</div>
+        <div class="kpi-label">Total Recovered</div>
+      </div>
+      <div class="kpi-card">
+        <mat-icon class="kpi-icon estimated">trending_up</mat-icon>
+        <div class="kpi-value">{{ totalEstimated | currency:'USD':'symbol':'1.0-0' }}</div>
+        <div class="kpi-label">Estimated Potential</div>
+      </div>
+      <div class="kpi-card">
+        <mat-icon class="kpi-icon rate">speed</mat-icon>
+        <div class="kpi-value">{{ overallRecoveryRate | number:'1.1-1' }}%</div>
+        <div class="kpi-label">Recovery Rate</div>
+      </div>
+      <div class="kpi-card" [class.at-risk]="atRiskCount > 0">
+        <mat-icon class="kpi-icon atrisk">warning</mat-icon>
+        <div class="kpi-value">{{ atRiskCount }}</div>
+        <div class="kpi-label">At-Risk Deadlines</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search clients..." [(ngModel)]="searchTerm" />
+      </div>
+      <div class="status-filters">
+        <button mat-stroked-button [class.active]="statusFilter === 'all'" (click)="statusFilter = 'all'">All</button>
+        <button mat-stroked-button [class.active]="statusFilter === 'active'" (click)="statusFilter = 'active'">Active</button>
+        <button mat-stroked-button [class.active]="statusFilter === 'at-risk'" (click)="statusFilter = 'at-risk'">At Risk</button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="filteredPortfolios.length === 0" class="empty-state">
+      <mat-icon>folder_open</mat-icon>
+      <h3>No clients found</h3>
+      <p>{{ searchTerm ? 'Try adjusting your search.' : 'Create a client engagement to get started.' }}</p>
+    </div>
+
+    <!-- Client Cards -->
+    <div class="client-list">
+      <div *ngFor="let portfolio of filteredPortfolios" class="client-card">
+        <div class="client-header">
+          <div class="client-avatar">{{ getClientInitials(portfolio.client.name) }}</div>
+          <div class="client-info">
+            <h3>{{ portfolio.client.name }}</h3>
+            <div class="client-meta">
+              <span class="meta-item"><mat-icon>business</mat-icon> {{ portfolio.client.industry }}</span>
+              <span class="meta-item"><mat-icon>location_on</mat-icon> {{ portfolio.client.state }}</span>
+              <span class="meta-item"><mat-icon>badge</mat-icon> EIN: {{ portfolio.client.ein }}</span>
+            </div>
+          </div>
+          <div class="client-kpis">
+            <div class="mini-kpi">
+              <span class="mini-value">{{ portfolio.totalRecovery | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="mini-label">Recovered</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-value">{{ portfolio.recoveryRate | number:'1.0-0' }}%</span>
+              <span class="mini-label">Rate</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recovery Progress Bar -->
+        <div class="recovery-progress">
+          <div class="progress-header">
+            <span>Recovery Progress</span>
+            <span>{{ portfolio.totalRecovery | currency:'USD':'symbol':'1.0-0' }} / {{ portfolio.totalEstimated | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="portfolio.recoveryRate | number:'1.0-0'"></div>
+          </div>
+        </div>
+
+        <!-- Engagement Table -->
+        <div class="engagement-list" *ngIf="portfolio.engagements.length > 0">
+          <table class="engagement-table">
+            <thead>
+              <tr>
+                <th>Engagement</th>
+                <th>Fiscal Year</th>
+                <th>Status</th>
+                <th>Claims</th>
+                <th>Recovered</th>
+                <th>Deadline</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let eng of portfolio.engagements" 
+                  [class.at-risk-row]="eng.deadlineUrgency !== 'normal'"
+                  class="engagement-row">
+                <td class="eng-name">{{ eng.engagementName }}</td>
+                <td>{{ eng.fiscalYear }}</td>
+                <td>
+                  <span class="status-badge" [style.color]="getStatusColor(eng.status)">
+                    <span class="status-dot" [style.background]="getStatusColor(eng.status)"></span>
+                    {{ eng.status }}
+                  </span>
+                </td>
+                <td>{{ eng.claimsCount }}</td>
+                <td>{{ eng.totalRecovery | currency:'USD':'symbol':'1.0-0' }}</td>
+                <td>
+                  <span class="urgency-badge" [ngClass]="'urgency-' + eng.deadlineUrgency">
+                    {{ eng.deadlineUrgency === 'normal' ? 'OK' : eng.deadlineUrgency | titlecase }}
+                  </span>
+                </td>
+                <td>
+                  <button mat-icon-button matTooltip="Open engagement" (click)="selectEngagement(portfolio, eng)">
+                    <mat-icon>open_in_new</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="portfolio.engagements.length === 0" class="no-engagements">
+          <mat-icon>info_outline</mat-icon> No engagements yet
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

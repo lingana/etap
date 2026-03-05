@@ -30,4 +30,5 @@ public class FlaggedTransactionDTO
     public string? ReviewedBy { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public decimal? ClaimAmount { get; set; }
+    public decimal? AdjustmentAmount { get; set; }
 }

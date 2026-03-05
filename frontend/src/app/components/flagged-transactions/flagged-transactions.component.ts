@@ -1,17 +1,54 @@
-
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { AuditService } from '../../services/audit.service';
+import { ToastService } from '../../services/toast.service';
+import { TaxClientService } from '../../services/tax-client.service';
+import { AgenticReviewService } from '../../services/agentic-review.service';
+import { FlaggedTransaction, TransactionStatus } from '../../models/transaction.model';
+import { Engagement } from '../../models/tax-client.model';
+import { MatDialog } from '@angular/material/dialog';
+import { AgentReviewDialogComponent } from '../agent-review-dialog/agent-review-dialog.component';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
+import { MatPaginator } from '@angular/material/paginator';
+import { SelectionModel } from '@angular/cdk/collections';
 
 @Component({
   selector: 'app-flagged-transactions',
-  templateUrl: './flagged-transactions-dx.component.html',
-  styleUrls: ['./flagged-transactions-dx.component.css']
+  templateUrl: './flagged-transactions.component.html',
+  styleUrls: ['./flagged-transactions.component.css']
 })
-export class FlaggedTransactionsComponent implements OnInit {
-  @ViewChild(DxDataGridComponent, { static: false }) dataGrid!: DxDataGridComponent;
+export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
+  private subscriptions: Subscription[] = [];
+  @ViewChild(MatSort) set matSort(sort: MatSort) {
+    if (sort) {
+      this.dataSource.sort = sort;
+    }
+  }
+  @ViewChild(MatPaginator) set matPaginator(paginator: MatPaginator) {
+    if (paginator) {
+      this.dataSource.paginator = paginator;
+    }
+  }
+
+  dataSource = new MatTableDataSource<FlaggedTransaction>([]);
+  selection = new SelectionModel<FlaggedTransaction>(true, []);
+  displayedColumns: string[] = [
+    'select', 'recordID', 'transactionDate', 'merchantName', 'merchantState',
+    'fuelType', 'quantity', 'netCost', 'totalTaxAmount', 'taxDifference',
+    'anomalyScore', 'status', 'claimAmount', 'actions'
+  ];
+  sortBy: string = 'anomalyScore';
   
+  // Make enum available in template
+  TransactionStatus = TransactionStatus;
+
   // Returns top N unreviewed, high-risk transactions (e.g., anomalyScore > 0.8)
     getSuggestedForReview(topN: number = 3): FlaggedTransaction[] {
     return this.flaggedTransactions
-      .filter(t => (t.anomalyScore > 0.8) && (!t.isReviewed && (t.status !== 'APPROVED' && t.status !== 'REJECTED')))
+      .filter(t => (t.anomalyScore > 0.8) && (!t.isReviewed && (t.status !== TransactionStatus.Approved && t.status !== TransactionStatus.Rejected)))
       .sort((a, b) => b.anomalyScore - a.anomalyScore)
       .slice(0, topN);
   }
@@ -20,16 +57,16 @@ export class FlaggedTransactionsComponent implements OnInit {
   reviewingTransactionId: number | null = null; // Track which transaction is being reviewed
   isBulkReviewing = false; // Track bulk review progress
   bulkReviewProgress = 0; // Progress percentage
-  selectedTransactionIds: number[] = []; // Track selected rows (DevExtreme uses array)
+  selectedTransactionIds: number[] = [];
   displayedTransactions: FlaggedTransaction[] = [];
   isLoading = false;
   selectedTransaction: FlaggedTransaction | null = null;
   scoreThreshold = 0.5;
   selectedRiskLevel: string = 'all';
+  selectedClaimTypeFilter: string = 'all';
   viewMode: 'table' | 'cards' = 'table';
   totalRecords = 0;
   
-  // DevExtreme lookups
   fuelTypes = [
     { value: 'Diesel', text: 'Diesel' },
     { value: 'Gasoline', text: 'Gasoline' },
@@ -67,6 +104,29 @@ export class FlaggedTransactionsComponent implements OnInit {
     return this.taxClientService.getSelectedEngagement();
   }
 
+  /** Adapt column labels based on selected tax type */
+  get productLabel(): string {
+    const taxType = this.taxClientService.getSelectedTaxType();
+    if (!taxType) return 'Product';
+    const name = taxType.name?.toLowerCase() || '';
+    if (name.includes('fuel') || name.includes('motor') || name.includes('diesel') || name.includes('gasoline')) return 'Fuel';
+    if (name.includes('alcohol')) return 'Beverage';
+    if (name.includes('tobacco')) return 'Product';
+    if (name.includes('heavy') || name.includes('huvt') || name.includes('vehicle')) return 'Vehicle';
+    return 'Product';
+  }
+
+  get quantityLabel(): string {
+    const taxType = this.taxClientService.getSelectedTaxType();
+    if (!taxType) return 'Qty';
+    const name = taxType.name?.toLowerCase() || '';
+    if (name.includes('fuel') || name.includes('motor') || name.includes('diesel') || name.includes('gasoline')) return 'Gallons';
+    if (name.includes('alcohol')) return 'Proof Gal';
+    if (name.includes('tobacco')) return 'Units';
+    if (name.includes('heavy') || name.includes('huvt') || name.includes('vehicle')) return 'Count';
+    return 'Qty';
+  }
+
   getEngagementLabel(): string {
     const engagement = this.getSelectedEngagement();
     const client = this.taxClientService.getSelectedClient();
@@ -76,8 +136,6 @@ export class FlaggedTransactionsComponent implements OnInit {
     return 'No engagement selected';
   }
 
-  // DevExtreme handles sorting automatically, no need for manual sort methods
-
   ngOnInit(): void {
     // Ensure selection is cleared on init
     this.selectedTransactionIds = [];
@@ -85,40 +143,45 @@ export class FlaggedTransactionsComponent implements OnInit {
     this.loadFlaggedTransactions();
     
     // Subscribe to upload completion event to auto-refresh
-    this.auditService.uploadCompleted$.subscribe(() => {
-      this.loadFlaggedTransactions();
-    });
+    this.subscriptions.push(
+      this.auditService.uploadCompleted$.subscribe(() => {
+        this.loadFlaggedTransactions();
+      })
+    );
 
     // Subscribe to transaction review event to auto-refresh
-    this.auditService.transactionReviewed$.subscribe(() => {
-      this.closeDetails();
-      this.loadFlaggedTransactions();
-    });
+    this.subscriptions.push(
+      this.auditService.transactionReviewed$.subscribe(() => {
+        this.closeDetails();
+        this.loadFlaggedTransactions();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   loadFlaggedTransactions(): void {
     this.isLoading = true;
     // Clear selection when reloading data
     this.selectedTransactionIds = [];
-    if (this.dataGrid && this.dataGrid.instance) {
-      this.dataGrid.instance.clearSelection();
-    }
+    this.selection.clear();
     console.log('Loading flagged transactions...');
     this.auditService.getFlaggedTransactions(this.scoreThreshold, 1000, 1).subscribe(
       (data) => {
         // Keep all flagged transactions visible (don't filter out reviewed ones)
         this.flaggedTransactions = data;
+        this.dataSource.data = data;
+        this.totalRecords = data.length;
         this.isLoading = false;
-        console.log('Loaded transactions:', data.length, 'Template:', './flagged-transactions-dx.component.html');
+        console.log('Loaded transactions:', data.length);
         if (data.length === 0) {
           this.toastService.info('No flagged transactions found');
         }
         // Clear selection after data loads
-        setTimeout(() => {
-          if (this.dataGrid && this.dataGrid.instance) {
-            this.dataGrid.instance.clearSelection();
-          }
-        }, 0);
+        this.selection.clear();
+        this.selectedTransactionIds = [];
       },
       (error) => {
         console.error('Error loading transactions:', error);
@@ -141,7 +204,20 @@ export class FlaggedTransactionsComponent implements OnInit {
   getClaimTypeColor(claimType: string): string {
     if (claimType === 'OVER') return 'badge-over';
     if (claimType === 'UNDER') return 'badge-under';
+    if (claimType === 'EXEMPT') return 'badge-exempt';
+    if (claimType === 'RATE_ERROR') return 'badge-rate-error';
     return 'badge-unknown';
+  }
+
+  getClaimTypeLabel(claimType: string): string {
+    const labels: { [key: string]: string } = {
+      'OVER': 'Overpayment',
+      'UNDER': 'Underpayment',
+      'EXEMPT': 'Exempt Use',
+      'RATE_ERROR': 'Rate Error',
+      'NEEDS_REVIEW': 'Needs Review'
+    };
+    return labels[claimType] || claimType || 'Unknown';
   }
 
   getScoreColor(score: number): string {
@@ -152,11 +228,11 @@ export class FlaggedTransactionsComponent implements OnInit {
 
   getStatusClass(status: string): string {
     const statusMap: { [key: string]: string } = {
-      'FLAGGED': 'status-flagged',
-      'REVIEWED': 'status-reviewed',
-      'APPROVED': 'status-approved',
-      'REJECTED': 'status-rejected',
-      'CLAIMED': 'status-claimed'
+      [TransactionStatus.Flagged]: 'status-flagged',
+      [TransactionStatus.Reviewed]: 'status-reviewed',
+      [TransactionStatus.Approved]: 'status-approved',
+      [TransactionStatus.Rejected]: 'status-rejected',
+      [TransactionStatus.Claimed]: 'status-claimed'
     };
     return statusMap[status] || 'status-default';
   }
@@ -170,7 +246,15 @@ export class FlaggedTransactionsComponent implements OnInit {
   }
 
   getApprovedCount(): number {
-    return this.flaggedTransactions.filter(t => t.status === 'APPROVED').length;
+    return this.flaggedTransactions.filter(t => t.status === TransactionStatus.Approved).length;
+  }
+
+  getOverpaymentCount(): number {
+    return this.flaggedTransactions.filter(t => t.predictedClaimType === 'OVER').length;
+  }
+
+  getUnderpaymentCount(): number {
+    return this.flaggedTransactions.filter(t => t.predictedClaimType === 'UNDER').length;
   }
 
   isReviewing(transaction: FlaggedTransaction): boolean {
@@ -188,7 +272,7 @@ export class FlaggedTransactionsComponent implements OnInit {
     const notes = `AI Agent recommendation: ${recommendation}`;
     
     // Call backend to persist the status change
-    this.auditService.reviewTransaction(transaction.recordID, newStatus, notes).subscribe({
+    this.auditService.reviewTransaction(transaction.recordID, newStatus, notes, undefined, newStatus).subscribe({
       next: () => {
         // Update local transaction
         transaction.status = newStatus;
@@ -204,6 +288,7 @@ export class FlaggedTransactionsComponent implements OnInit {
         
         // Refresh the table
         this.flaggedTransactions = [...this.flaggedTransactions];
+        this.dataSource.data = this.flaggedTransactions;
         
         // Analytics will auto-refresh via transactionReviewed$ event
       },
@@ -267,9 +352,34 @@ export class FlaggedTransactionsComponent implements OnInit {
     });
   }
 
-  // Bulk selection methods (kept for compatibility but DevExtreme handles selection automatically)
   isSelected(transaction: FlaggedTransaction): boolean {
-    return this.selectedTransactionIds.includes(transaction.recordID);
+    return this.selection.isSelected(transaction);
+  }
+
+  isAllSelected(): boolean {
+    return this.selection.selected.length === this.dataSource.data.length && this.dataSource.data.length > 0;
+  }
+
+  isSomeSelected(): boolean {
+    return this.selection.selected.length > 0 && !this.isAllSelected();
+  }
+
+  toggleSelectAll(): void {
+    if (this.isAllSelected()) {
+      this.selection.clear();
+    } else {
+      this.dataSource.data.forEach(row => this.selection.select(row));
+    }
+    this.updateSelectedIds();
+  }
+
+  toggleSelection(row: FlaggedTransaction): void {
+    this.selection.toggle(row);
+    this.updateSelectedIds();
+  }
+
+  private updateSelectedIds(): void {
+    this.selectedTransactionIds = this.selection.selected.map(t => t.recordID);
   }
 
   // Bulk AI Agent Review
@@ -344,9 +454,7 @@ export class FlaggedTransactionsComponent implements OnInit {
         
           // Clear selection
           this.selectedTransactionIds = [];
-          if (this.dataGrid) {
-            this.dataGrid.instance.clearSelection();
-          }
+          this.selection.clear();
         
           // Refresh data to get latest from backend
           this.loadFlaggedTransactions();
@@ -446,7 +554,6 @@ export class FlaggedTransactionsComponent implements OnInit {
     this.router.navigate(['/dashboard/upload']);
   }
   
-  // Alias for bulk review - used by DevExtreme template
   onAutoReview(): void {
     this.runBulkAgenticReview();
   }
@@ -498,9 +605,36 @@ export class FlaggedTransactionsComponent implements OnInit {
     this.toastService.success('Exported flagged transactions to CSV');
   }
 
-  // Enhanced UX Methods - DevExtreme handles these automatically
   applyFilters(): void {
-    this.toastService.info(`Filtering by risk level: ${this.selectedRiskLevel}`);
+    let filtered = this.flaggedTransactions;
+
+    if (this.selectedRiskLevel !== 'all') {
+      filtered = filtered.filter(t => this.getRiskLevel(t.anomalyScore) === this.selectedRiskLevel);
+    }
+
+    if (this.selectedClaimTypeFilter !== 'all') {
+      filtered = filtered.filter(t => t.predictedClaimType === this.selectedClaimTypeFilter);
+    }
+
+    this.dataSource.data = filtered;
+    this.selection.clear();
+    this.selectedTransactionIds = [];
+  }
+
+  applySorting(): void {
+    const sort = this.dataSource.sort;
+    if (sort) {
+      const sortMap: { [key: string]: string } = {
+        'anomalyScore': 'anomalyScore',
+        'amount': 'netCost',
+        'date': 'transactionDate',
+        'merchant': 'merchantName'
+      };
+      const active = sortMap[this.sortBy] || 'anomalyScore';
+      sort.active = active;
+      sort.direction = 'desc';
+      sort.sortChange.emit({ active, direction: 'desc' });
+    }
   }
 
   toggleViewMode(mode: 'table' | 'cards'): void {
@@ -535,6 +669,13 @@ export class FlaggedTransactionsComponent implements OnInit {
 
   // DevExtreme handles pagination automatically, no need for manual paginated transactions getter
 
+  get paginatedTransactions(): FlaggedTransaction[] {
+    const paginator = this.dataSource.paginator;
+    if (!paginator) return this.dataSource.filteredData;
+    const start = paginator.pageIndex * paginator.pageSize;
+    return this.dataSource.filteredData.slice(start, start + paginator.pageSize);
+  }
+
   trackByTransactionId(index: number, transaction: FlaggedTransaction): number {
     return transaction.recordID;
   }
@@ -549,77 +690,24 @@ export class FlaggedTransactionsComponent implements OnInit {
       return;
     }
 
+    // Only allow APPROVED transactions into a refund claim
+    const selectedTransactions = this.flaggedTransactions.filter(
+      t => this.selectedTransactionIds.includes(t.recordID)
+    );
+    const nonApproved = selectedTransactions.filter(t => t.status !== TransactionStatus.Approved);
+    if (nonApproved.length > 0) {
+      this.toastService.warning(
+        `${nonApproved.length} selected transaction(s) are not approved. Only approved transactions can be included in a refund claim.`
+      );
+      return;
+    }
+
     // Store transaction IDs in service for refund claims page to use
     this.taxClientService.setPendingRefundTransactionIds(this.selectedTransactionIds);
     this.router.navigate(['/dashboard/refund-claims']);
   }
-  
-  // DevExtreme-specific methods
-  onSelectionChanged(e: any): void {
-    this.selectedTransactionIds = e.selectedRowKeys || [];
-    console.log('Selection changed:', this.selectedTransactionIds, 'Count:', this.selectedCount);
-  }
-  
-  customStateSave = (state: any): void => {
-    // Remove selection from saved state
-    if (state) {
-      delete state.selectedRowKeys;
-      delete state.selectionFilter;
-    }
-    localStorage.setItem('flaggedTransactionsGridState', JSON.stringify(state));
-  }
-  
-  customStateLoad = (): any => {
-    const state = localStorage.getItem('flaggedTransactionsGridState');
-    if (state) {
-      const parsedState = JSON.parse(state);
-      // Ensure no selection is restored
-      delete parsedState.selectedRowKeys;
-      delete parsedState.selectionFilter;
-      return parsedState;
-    }
-    return null;
-  }
-  
-  onRowClick(e: any): void {
-    if (e.rowType === 'data') {
-      this.viewDetails(e.data);
-    }
-  }
-  
-  getRiskClass(score: number): string {
-    if (score >= 0.8) return 'risk-high';
-    if (score >= 0.6) return 'risk-medium';
-    return 'risk-low';
-  }
-  
-  getConfidenceClass(confidence: number): string {
-    if (confidence >= 0.9) return 'confidence-high';
-    if (confidence >= 0.7) return 'confidence-medium';
-    return 'confidence-low';
-  }
-  
-  calculateRiskScore(data: FlaggedTransaction): number {
-    return data.anomalyScore;
-  }
-  
-  isNotReviewed(data: FlaggedTransaction): boolean {
-    return !data.isReviewed;
-  }
-  
-  onReviewClick = (e: any): void => {
-    e.event?.stopPropagation(); // Prevent row click
-    this.runAgenticReview(e.row.data);
-  }
-  
-  onViewDetailsClick = (e: any): void => {
-    e.event?.stopPropagation(); // Prevent duplicate row click
-    this.viewDetails(e.row.data);
-  }
 
-  onApproveClick = (e: any): void => {
-    e.event?.stopPropagation();
-    const transaction = e.row.data;
+  approveTransaction(transaction: FlaggedTransaction): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
@@ -638,9 +726,7 @@ export class FlaggedTransactionsComponent implements OnInit {
     });
   }
 
-  onRejectClick = (e: any): void => {
-    e.event?.stopPropagation();
-    const transaction = e.row.data;
+  rejectTransaction(transaction: FlaggedTransaction): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
@@ -658,10 +744,22 @@ export class FlaggedTransactionsComponent implements OnInit {
       }
     });
   }
-
+  
+  getRiskClass(score: number): string {
+    if (score >= 0.8) return 'risk-high';
+    if (score >= 0.6) return 'risk-medium';
+    return 'risk-low';
+  }
+  
+  getConfidenceClass(confidence: number): string {
+    if (confidence >= 0.9) return 'confidence-high';
+    if (confidence >= 0.7) return 'confidence-medium';
+    return 'confidence-low';
+  }
+  
   applyManualDecision(transaction: FlaggedTransaction, decision: string): void {
     const notes = `Manual decision: ${decision} by auditor`;
-    this.auditService.reviewTransaction(transaction.recordID, decision, notes).subscribe({
+    this.auditService.reviewTransaction(transaction.recordID, decision, notes, undefined, decision).subscribe({
       next: () => {
         transaction.status = decision;
         transaction.isReviewed = true;
@@ -675,6 +773,7 @@ export class FlaggedTransactionsComponent implements OnInit {
         
         // Trigger data refresh
         this.flaggedTransactions = [...this.flaggedTransactions];
+        this.dataSource.data = this.flaggedTransactions;
       },
       error: (error) => {
         console.error('Failed to apply decision:', error);
@@ -682,54 +781,5 @@ export class FlaggedTransactionsComponent implements OnInit {
       }
     });
   }
-  
-  onExporting(e: any): void {
-    const workbook = new Workbook();
-    const worksheet = workbook.addWorksheet('Flagged Transactions');
-    
-    exportDataGrid({
-      component: e.component,
-      worksheet: worksheet,
-      autoFilterEnabled: true,
-      customizeCell: ({ gridCell, excelCell }: any) => {
-        if (gridCell.rowType === 'data') {
-          // Format risk scores with color
-          if (gridCell.column.dataField === 'anomalyScore') {
-            const score = gridCell.value;
-            if (score >= 0.8) {
-              excelCell.font = { color: { argb: 'FFDC2626' }, bold: true };
-            } else if (score >= 0.6) {
-              excelCell.font = { color: { argb: 'FFCA8A04' }, bold: true };
-            }
-          }
-        }
-      }
-    }).then(() => {
-      workbook.xlsx.writeBuffer().then((buffer: any) => {
-        const blob = new Blob([buffer], { type: 'application/octet-stream' });
-        const fileName = `Flagged_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
-        FileSaver.saveAs(blob, fileName);
-        this.toastService.success('Exported flagged transactions to Excel');
-      });
-    });
-    e.cancel = true;
-  }
 }
-
-import { Component, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
-import { AuditService } from '../../services/audit.service';
-import { ToastService } from '../../services/toast.service';
-import { TaxClientService } from '../../services/tax-client.service';
-import { AgenticReviewService } from '../../services/agentic-review.service';
-import { FlaggedTransaction } from '../../models/transaction.model';
-import { Engagement } from '../../models/tax-client.model';
-import { MatDialog } from '@angular/material/dialog';
-import { AgentReviewDialogComponent } from '../agent-review-dialog/agent-review-dialog.component';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { DxDataGridComponent } from 'devextreme-angular';
-import { exportDataGrid } from 'devextreme/excel_exporter';
-import { Workbook } from 'exceljs';
-import * as FileSaver from 'file-saver';
-
 

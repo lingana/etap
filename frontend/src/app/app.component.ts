@@ -5,7 +5,9 @@ import { Router } from '@angular/router';
 import { AuthService, UserDto } from './services/auth.service';
 import { TaxClientService } from './services/tax-client.service';
 import { ToastService } from './services/toast.service';
+import { NotificationService, AppNotification } from './services/notification.service';
 import { MatDialog } from '@angular/material/dialog';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -27,12 +29,19 @@ export class AppComponent implements OnInit, OnDestroy {
   sessionExpiry: Date | null = null;
   pendingRefundClaimTransactionIds: number[] = [];
 
+  // Notification state
+  showNotificationPanel = false;
+  notifications: AppNotification[] = [];
+  unreadCount = 0;
+  private notifSubs = new Subscription();
+
   constructor(
     private router: Router,
     private authService: AuthService,
     private taxClientService: TaxClientService,
     private toastService: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    public notificationService: NotificationService
   ) {}
 
   // Lifecycle hooks
@@ -40,18 +49,32 @@ export class AppComponent implements OnInit, OnDestroy {
     this.checkAuthentication();
     this.checkMobileScreen();
     this.setupKeyboardShortcuts();
+    this.subscribeNotifications();
   }
 
   ngOnDestroy(): void {
     if (this.keydownListener) {
       document.removeEventListener('keydown', this.keydownListener);
     }
+    this.notifSubs.unsubscribe();
   }
 
   // HostListener for window resize - Angular best practice
   @HostListener('window:resize')
   onWindowResize(): void {
     this.checkMobileScreen();
+  }
+
+  // Close notification panel when clicking outside
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.showNotificationPanel) {
+      const target = event.target as HTMLElement;
+      const isInsidePanel = target.closest('.notification-wrapper');
+      if (!isInsidePanel) {
+        this.showNotificationPanel = false;
+      }
+    }
   }
 
   // Returns initials from fullName or first/last name
@@ -131,10 +154,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       this.dialog.open(NaturalLanguageQueryComponent, {
-        width: '600px',
+        width: '85vw',
+        maxWidth: '1100px',
         maxHeight: '90vh',
         autoFocus: true,
-        panelClass: 'audit-ai-chat-dialog',
+        panelClass: 'nlq-dialog-panel',
         data: { context: 'navbar' }
       });
       this.isAILoading = false;
@@ -194,13 +218,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Event handlers
   onEngagementSelected(engagement: any): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.currentPage = 'dashboard';
     this.router.navigate(['/dashboard/overview']);
   }
 
   onLoginSuccess(): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.currentPage = 'tax-selection';
     this.router.navigate(['/tax-selection']);
+  }
+
+  switchEngagement(): void {
+    this.currentPage = 'tax-selection';
   }
 
   // Utility methods
@@ -214,7 +244,12 @@ export class AppComponent implements OnInit, OnDestroy {
       '/dashboard/activity': 'Activity Log',
       '/dashboard/systems': 'System Status',
       '/dashboard/refund-claims': 'Refund Claims',
-      '/dashboard/recovery': 'Recovery Dashboard'
+      '/dashboard/recovery': 'Recovery Dashboard',
+      '/dashboard/deadlines': 'Filing Deadlines',
+      '/dashboard/report': 'Engagement Report',
+      '/dashboard/duplicates': 'Duplicate Detection',
+      '/dashboard/team': 'Team Management',
+      '/dashboard/portfolio': 'Client Portfolio'
     };
     // Check for exact match first
     if (titleMap[url]) {
@@ -243,5 +278,63 @@ export class AppComponent implements OnInit, OnDestroy {
   extendSession(): void {
     // TODO: Implement session extension logic
     this.showSessionWarning = false;
+  }
+
+  // Notification methods
+  private subscribeNotifications(): void {
+    this.notifSubs.add(
+      this.notificationService.notifications$.subscribe(notifs => {
+        this.notifications = notifs;
+      })
+    );
+    this.notifSubs.add(
+      this.notificationService.unreadCount$.subscribe(count => {
+        this.unreadCount = count;
+      })
+    );
+  }
+
+  toggleNotificationPanel(): void {
+    this.showNotificationPanel = !this.showNotificationPanel;
+  }
+
+  closeNotificationPanel(): void {
+    this.showNotificationPanel = false;
+  }
+
+  markNotificationRead(id: string): void {
+    this.notificationService.markAsRead(id);
+  }
+
+  markAllNotificationsRead(): void {
+    this.notificationService.markAllAsRead();
+  }
+
+  removeNotification(id: string): void {
+    this.notificationService.removeNotification(id);
+  }
+
+  getNotificationIcon(type: string): string {
+    switch (type) {
+      case 'deadline': return 'schedule';
+      case 'status_change': return 'update';
+      case 'ai_complete': return 'smart_toy';
+      case 'irs_response': return 'mail';
+      case 'assignment': return 'person_add';
+      case 'system': return 'info';
+      default: return 'notifications';
+    }
+  }
+
+  getNotificationColor(type: string): string {
+    switch (type) {
+      case 'deadline': return '#f59e0b';
+      case 'status_change': return '#6366f1';
+      case 'ai_complete': return '#10b981';
+      case 'irs_response': return '#3b82f6';
+      case 'assignment': return '#8b5cf6';
+      case 'system': return '#64748b';
+      default: return '#6366f1';
+    }
   }
 }

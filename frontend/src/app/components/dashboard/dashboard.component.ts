@@ -37,6 +37,7 @@ export class DashboardComponent implements OnInit {
   stats: any = null;
   recentUploads: any[] = [];
   isLoading = true;
+  dashboardError: string | null = null;
   aiInsights: AIInsight | null = null;
 
   // Workflow steps
@@ -45,17 +46,15 @@ export class DashboardComponent implements OnInit {
     { id: 2, label: 'Detect Anomalies', icon: 'psychology', completed: false },
     { id: 3, label: 'Review Findings', icon: 'fact_check', completed: false },
     { id: 4, label: 'Generate Claims', icon: 'request_quote', completed: false },
-    { id: 5, label: 'File & Submit', icon: 'send', completed: false },
-    { id: 6, label: 'Track Recovery', icon: 'account_balance', completed: false }
+    { id: 5, label: 'Track Recovery', icon: 'account_balance', completed: false }
   ];
 
   stepAIGuidance: {[key: number]: string} = {
     1: 'Upload transaction data for AI-powered analysis',
     2: 'AI automatically detects tax overpayment anomalies',
     3: 'Use AI agentic review for faster validation',
-    4: 'AI generates refund claims from flagged transactions',
-    5: 'Submit IRS Form 8849 for approved claims',
-    6: 'Monitor claim status and payment recovery'
+    4: 'AI generates Form 8849-ready refund claims from approved transactions',
+    5: 'Monitor claim status and payment recovery'
   };
 
   constructor(
@@ -79,12 +78,14 @@ export class DashboardComponent implements OnInit {
     this.auditService.getDashboardStats().subscribe(
       (stats) => {
         this.stats = stats;
+        this.dashboardError = null;
         this.updateWorkflowProgress();
         this.loadAIInsights();
         this.isLoading = false;
       },
       (error) => {
         console.error('Error loading dashboard stats:', error);
+        this.dashboardError = 'Unable to load dashboard data. Please check your connection and try again.';
         this.isLoading = false;
       }
     );
@@ -104,11 +105,8 @@ export class DashboardComponent implements OnInit {
       // Step 4: Generate Claims (check if any refund claims exist)
       this.workflowSteps[3].completed = false; // Will be updated when we fetch claim stats
       
-      // Step 5: File & Submit
+      // Step 5: Track Recovery
       this.workflowSteps[4].completed = false; // Will be updated when we fetch claim stats
-      
-      // Step 6: Track Recovery
-      this.workflowSteps[5].completed = false; // Will be updated when we fetch claim stats
       
       // Load refund claim stats to update steps 4-6
       this.loadRefundClaimStats();
@@ -123,11 +121,8 @@ export class DashboardComponent implements OnInit {
           // Step 4: Claims generated if total claims > 0
           this.workflowSteps[3].completed = summary.totalClaims > 0;
           
-          // Step 5: Filed if submitted claims > 0
-          this.workflowSteps[4].completed = summary.submittedClaims > 0;
-          
-          // Step 6: Recovery tracked if paid amount > 0
-          this.workflowSteps[5].completed = summary.totalPaidAmount > 0;
+          // Step 5: Recovery tracked if paid amount > 0
+          this.workflowSteps[4].completed = summary.totalPaidAmount > 0;
         }
       },
       error: (err) => {
@@ -147,9 +142,14 @@ export class DashboardComponent implements OnInit {
   }
 
   getCurrentStep(): number {
-    if (this.stats?.totalRecords === 0) return 1;
-    if (this.stats?.reviewedRecords === 0) return 2;
-    return 3;
+    // Walk backwards through workflow steps to find the latest completed step
+    for (let i = this.workflowSteps.length - 1; i >= 0; i--) {
+      if (this.workflowSteps[i].completed) {
+        // Return the next step after the last completed one
+        return Math.min(i + 2, this.workflowSteps.length);
+      }
+    }
+    return 1;
   }
 
   getStepStatus(stepId: number): string {
@@ -186,41 +186,9 @@ export class DashboardComponent implements OnInit {
         this.router.navigate(['/dashboard/refund-claims']);
         break;
       case 5:
-        this.router.navigate(['/dashboard/refund-claims']);
-        break;
-      case 6:
         this.router.navigate(['/dashboard/recovery']);
         break;
     }
-  }
-
-  exportForm8849(): void {
-    const engagement = this.taxClientService.getSelectedEngagement();
-    if (!engagement) {
-      this.toastService.error('No engagement selected');
-      return;
-    }
-
-    const taxPeriod = new Date().getFullYear().toString();
-    const url = `${environment.apiUrl}/export/form8849/${engagement.id}/${taxPeriod}`;
-
-    this.toastService.info('Generating Form 8849 export...');
-
-    this.http.get(url, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `Form8849_${taxPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        window.URL.revokeObjectURL(downloadUrl);
-        this.toastService.success('Form 8849 exported successfully');
-      },
-      error: (error) => {
-        console.error('Export error:', error);
-        this.toastService.error('Failed to export Form 8849');
-      }
-    });
   }
 
   getCurrentUserName(): string {
@@ -281,11 +249,6 @@ export class DashboardComponent implements OnInit {
     return Math.round((this.stats.flaggedRecords / this.stats.totalRecords) * 100);
   }
 
-  runQuickAnalysis(): void {
-    this.toastService.info('Running quick analysis...');
-    // TODO: Implement quick analysis functionality
-  }
-
   openAIAssistant(): void {
     // Emit event to parent component to open AI chat
     this.toastService.info('Opening AI Assistant...');
@@ -322,9 +285,9 @@ export class DashboardComponent implements OnInit {
     if (!this.stats || this.stats.flaggedRecords === 0) return [];
     // Distribution based on common audit findings
     return [
-      { label: 'Tax Rate Issues', value: 45, color: '#0078d4', count: Math.round(this.stats.flaggedRecords * 0.45) },
-      { label: 'Documentation', value: 30, color: '#d83b01', count: Math.round(this.stats.flaggedRecords * 0.30) },
-      { label: 'Volume Anomalies', value: 25, color: '#107c10', count: Math.round(this.stats.flaggedRecords * 0.25) }
+      { label: 'Tax Rate Issues', value: 45, color: '#5a67d8', count: Math.round(this.stats.flaggedRecords * 0.45) },
+      { label: 'Documentation', value: 30, color: '#dc2626', count: Math.round(this.stats.flaggedRecords * 0.30) },
+      { label: 'Volume Anomalies', value: 25, color: '#10b981', count: Math.round(this.stats.flaggedRecords * 0.25) }
     ];
   }
 

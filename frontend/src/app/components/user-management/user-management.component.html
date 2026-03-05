@@ -1,0 +1,141 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div class="header-content">
+    <div class="header-text">
+      <h1>
+        <mat-icon class="header-icon">group</mat-icon>
+        Team Management
+      </h1>
+      <p class="header-subtitle">Manage users, roles, and team assignments</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="toggleInviteForm()" *ngIf="isAdmin">
+      <mat-icon>person_add</mat-icon>
+      Invite User
+    </button>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-container" *ngIf="isLoading">
+  <mat-spinner diameter="40"></mat-spinner>
+  <p>Loading team members...</p>
+</div>
+
+<!-- Error -->
+<div class="error-container" *ngIf="loadError && !isLoading">
+  <mat-icon>error_outline</mat-icon>
+  <p>{{ loadError }}</p>
+  <button mat-raised-button color="primary" (click)="loadTeam()">Retry</button>
+</div>
+
+<!-- Content -->
+<div class="team-content" *ngIf="!isLoading && !loadError">
+
+  <!-- Stats -->
+  <div class="team-stats">
+    <div class="stat-card">
+      <span class="stat-value">{{ teamMembers.length }}</span>
+      <span class="stat-label">Total Users</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ activeCount }}</span>
+      <span class="stat-label">Active</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ managerCount }}</span>
+      <span class="stat-label">Managers</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ auditorCount }}</span>
+      <span class="stat-label">Auditors</span>
+    </div>
+  </div>
+
+  <!-- Invite Form -->
+  <div class="invite-form-card" *ngIf="showInviteForm">
+    <h4><mat-icon>mail</mat-icon> Invite New Team Member</h4>
+    <div class="invite-grid">
+      <div class="form-field">
+        <label>First Name *</label>
+        <input type="text" class="form-control" [(ngModel)]="inviteData.firstName" placeholder="First name" />
+      </div>
+      <div class="form-field">
+        <label>Last Name *</label>
+        <input type="text" class="form-control" [(ngModel)]="inviteData.lastName" placeholder="Last name" />
+      </div>
+      <div class="form-field">
+        <label>Email *</label>
+        <input type="email" class="form-control" [(ngModel)]="inviteData.email" placeholder="user@company.com" />
+      </div>
+      <div class="form-field">
+        <label>Role</label>
+        <select class="form-control" [(ngModel)]="inviteData.role">
+          <option *ngFor="let role of roles" [value]="role.value">{{ role.label }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="invite-actions">
+      <button mat-raised-button color="primary" (click)="submitInvite()" [disabled]="inviting">
+        <mat-icon *ngIf="!inviting">send</mat-icon>
+        <mat-spinner *ngIf="inviting" diameter="18"></mat-spinner>
+        {{ inviting ? 'Sending...' : 'Send Invitation' }}
+      </button>
+      <button mat-stroked-button (click)="toggleInviteForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Team Members Grid -->
+  <div class="team-grid">
+    <div class="team-card" *ngFor="let member of teamMembers" [class.inactive]="!member.isActive">
+      <div class="member-header">
+        <div class="member-avatar">
+          <span>{{ getUserInitials(member) }}</span>
+          <span class="status-dot" [class.online]="member.isActive" [class.offline]="!member.isActive"></span>
+        </div>
+        <div class="member-info">
+          <h5>{{ member.fullName || member.firstName + ' ' + member.lastName }}</h5>
+          <p class="member-email">{{ member.email }}</p>
+        </div>
+      </div>
+      
+      <div class="member-details">
+        <div class="detail-row">
+          <span class="detail-label">Role</span>
+          <span class="role-badge" [ngClass]="getRoleBadgeClass(member.role)">
+            {{ getRoleLabel(member.role) }}
+          </span>
+        </div>
+        <div class="detail-row" *ngIf="member.lastLogin">
+          <span class="detail-label">Last Login</span>
+          <span class="detail-value">{{ member.lastLogin | date:'short' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Cases</span>
+          <span class="detail-value">{{ member.assignedCases || 0 }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Reviews</span>
+          <span class="detail-value">{{ member.reviewedTransactions || 0 }}</span>
+        </div>
+      </div>
+
+      <div class="member-actions" *ngIf="isAdmin">
+        <select class="role-select" [ngModel]="member.role" (ngModelChange)="changeRole(member, $event)">
+          <option *ngFor="let role of roles" [value]="role.value">{{ role.label }}</option>
+        </select>
+        <button mat-icon-button [color]="member.isActive ? 'warn' : 'primary'" 
+                (click)="toggleUserStatus(member)"
+                [matTooltip]="member.isActive ? 'Deactivate' : 'Activate'">
+          <mat-icon>{{ member.isActive ? 'person_off' : 'person' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="teamMembers.length === 0">
+    <mat-icon>group_off</mat-icon>
+    <h3>No team members found</h3>
+    <p>Invite team members to start collaborating.</p>
+  </div>
+</div>

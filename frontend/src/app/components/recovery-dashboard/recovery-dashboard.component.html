@@ -1,205 +1,214 @@
-<div class="recovery-dashboard" *ngIf="!loading && summary">
-  <!-- Header -->
-  <div class="dashboard-header mb-4">
-    <h3><i class="bi bi-graph-up-arrow"></i> Recovery Tracking Dashboard</h3>
-    <p class="text-muted">Monitor refund claims and recovery performance</p>
+<div class="recovery-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrapper">
+        <mat-icon class="header-icon">account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 class="page-title">Recovery Tracking Dashboard</h2>
+        <p class="page-subtitle">Monitor refund claims and recovery performance</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button mat-stroked-button class="refresh-btn" (click)="loadSummary()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
   </div>
 
-  <!-- Key Metrics -->
-  <div class="row mb-4">
-    <div class="col-md-3">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" (click)="loadSummary()">Retry</button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div class="content-area" *ngIf="!loading && summary">
+
+    <!-- Recovery Progress Bar -->
+    <div class="recovery-progress-section">
+      <div class="progress-header">
+        <span class="progress-label">Overall Recovery Progress</span>
+        <span class="progress-value">{{ getRecoveryRate() | number:'1.0-0' }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="getRecoveryRate()"></div>
+      </div>
+      <div class="progress-legend">
+        <span>Claimed: ${{ summary.totalClaimedAmount | number:'1.0-0' }}</span>
+        <span>Recovered: ${{ summary.totalPaidAmount | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
       <div class="metric-card total-claimed">
-        <div class="metric-icon">
-          <i class="bi bi-cash-stack"></i>
+        <div class="metric-icon-box">
+          <mat-icon>attach_money</mat-icon>
         </div>
         <div class="metric-content">
-          <h6>Total Claimed</h6>
-          <h2>${{ summary.totalClaimedAmount | number:'1.0-0' }}</h2>
-          <small>{{ summary.totalClaims }} claims</small>
+          <span class="metric-label">Total Claimed</span>
+          <span class="metric-value">${{ summary.totalClaimedAmount | number:'1.0-0' }}</span>
+          <span class="metric-sub">{{ summary.totalClaims }} claims</span>
         </div>
       </div>
-    </div>
 
-    <div class="col-md-3">
       <div class="metric-card approved">
-        <div class="metric-icon">
-          <i class="bi bi-check-circle"></i>
+        <div class="metric-icon-box">
+          <mat-icon>check_circle</mat-icon>
         </div>
         <div class="metric-content">
-          <h6>Approved</h6>
-          <h2>${{ summary.totalApprovedAmount | number:'1.0-0' }}</h2>
-          <small>{{ getApprovalRate() | number:'1.0-0' }}% approval rate</small>
+          <span class="metric-label">Approved</span>
+          <span class="metric-value">${{ summary.totalApprovedAmount | number:'1.0-0' }}</span>
+          <span class="metric-sub">{{ getApprovalRate() | number:'1.0-0' }}% approval rate</span>
         </div>
       </div>
-    </div>
 
-    <div class="col-md-3">
       <div class="metric-card recovered">
-        <div class="metric-icon">
-          <i class="bi bi-piggy-bank"></i>
+        <div class="metric-icon-box">
+          <mat-icon>savings</mat-icon>
         </div>
         <div class="metric-content">
-          <h6>Recovered</h6>
-          <h2>${{ summary.totalPaidAmount | number:'1.0-0' }}</h2>
-          <small>{{ getRecoveryRate() | number:'1.0-0' }}% recovery rate</small>
+          <span class="metric-label">Recovered</span>
+          <span class="metric-value">${{ summary.totalPaidAmount | number:'1.0-0' }}</span>
+          <span class="metric-sub">{{ getRecoveryRate() | number:'1.0-0' }}% recovery rate</span>
         </div>
       </div>
-    </div>
 
-    <div class="col-md-3">
-      <div class="metric-card pending">
-        <div class="metric-icon">
-          <i class="bi bi-hourglass-split"></i>
+      <div class="metric-card pending-metric">
+        <div class="metric-icon-box">
+          <mat-icon>hourglass_top</mat-icon>
         </div>
         <div class="metric-content">
-          <h6>Pending</h6>
-          <h2>${{ summary.totalPendingAmount | number:'1.0-0' }}</h2>
-          <small>{{ summary.submittedClaims }} in review</small>
+          <span class="metric-label">Pending</span>
+          <span class="metric-value">${{ summary.totalPendingAmount | number:'1.0-0' }}</span>
+          <span class="metric-sub">{{ summary.submittedClaims }} in review</span>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Charts Row -->
-  <div class="row mb-4">
-    <!-- Status Breakdown -->
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">
-          <h6><i class="bi bi-pie-chart"></i> Claims by Status</h6>
+    <!-- Charts Row -->
+    <div class="charts-grid">
+      <!-- Claims by Status -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <mat-icon>donut_large</mat-icon>
+          <h3>Claims by Status</h3>
         </div>
-        <div class="card-body">
-          <div class="status-breakdown">
-            <div *ngFor="let item of statusChartData" class="status-item">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="status-name">{{ item.name }}</span>
-                <span class="badge bg-primary">{{ item.value }}</span>
-              </div>
-              <div class="progress" style="height: 8px;">
-                <div 
-                  class="progress-bar" 
-                  [style.width.%]="(item.value / summary.totalClaims * 100)"
-                ></div>
+        <div class="chart-body">
+          <div *ngFor="let item of statusChartData" class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-name">{{ item.name }}</span>
+              <span class="breakdown-badge status-badge">{{ item.value }}</span>
+            </div>
+            <div class="progress-track small">
+              <div class="progress-fill status-fill"
+                   [style.width.%]="summary.totalClaims > 0 ? (item.value / summary.totalClaims * 100) : 0">
               </div>
             </div>
           </div>
+          <div *ngIf="statusChartData.length === 0" class="no-data">No data available</div>
         </div>
       </div>
-    </div>
 
-    <!-- Tax Type Breakdown -->
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">
-          <h6><i class="bi bi-bar-chart"></i> Claims by Tax Type</h6>
+      <!-- Claims by Tax Type -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <mat-icon>bar_chart</mat-icon>
+          <h3>Claims by Tax Type</h3>
         </div>
-        <div class="card-body">
-          <div class="tax-type-breakdown">
-            <div *ngFor="let item of taxTypeChartData" class="tax-item">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="tax-name">{{ item.name }}</span>
-                <span class="text-success">${{ item.value | number:'1.0-0' }}</span>
-              </div>
-              <div class="progress" style="height: 8px;">
-                <div 
-                  class="progress-bar bg-success" 
-                  [style.width.%]="(item.value / summary.totalClaimedAmount * 100)"
-                ></div>
+        <div class="chart-body">
+          <div *ngFor="let item of taxTypeChartData" class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-name">{{ item.name }}</span>
+              <span class="breakdown-amount">${{ item.value | number:'1.0-0' }}</span>
+            </div>
+            <div class="progress-track small">
+              <div class="progress-fill tax-fill"
+                   [style.width.%]="summary.totalClaimedAmount > 0 ? (item.value / summary.totalClaimedAmount * 100) : 0">
               </div>
             </div>
           </div>
+          <div *ngIf="taxTypeChartData.length === 0" class="no-data">No data available</div>
         </div>
       </div>
-    </div>
 
-    <!-- Refund Type Breakdown -->
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">
-          <h6><i class="bi bi-stack"></i> Claims by Refund Type</h6>
+      <!-- Claims by Refund Type -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <mat-icon>layers</mat-icon>
+          <h3>Claims by Refund Type</h3>
         </div>
-        <div class="card-body">
-          <div class="refund-type-breakdown">
-            <div *ngFor="let item of refundTypeChartData" class="refund-item">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="refund-name">{{ item.name }}</span>
-                <span class="badge bg-info">{{ item.value }}</span>
-              </div>
-              <div class="progress" style="height: 8px;">
-                <div 
-                  class="progress-bar bg-info" 
-                  [style.width.%]="(item.value / summary.totalClaims * 100)"
-                ></div>
+        <div class="chart-body">
+          <div *ngFor="let item of refundTypeChartData" class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-name">{{ item.name }}</span>
+              <span class="breakdown-badge refund-badge">{{ item.value }}</span>
+            </div>
+            <div class="progress-track small">
+              <div class="progress-fill refund-fill"
+                   [style.width.%]="summary.totalClaims > 0 ? (item.value / summary.totalClaims * 100) : 0">
               </div>
             </div>
           </div>
+          <div *ngIf="refundTypeChartData.length === 0" class="no-data">No data available</div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Performance Metrics -->
-  <div class="row">
-    <div class="col-md-12">
-      <div class="card">
-        <div class="card-header">
-          <h6><i class="bi bi-speedometer2"></i> Performance Metrics</h6>
+    <!-- Pipeline Summary -->
+    <div class="pipeline-section">
+      <div class="chart-header">
+        <mat-icon>speed</mat-icon>
+        <h3>Claim Pipeline</h3>
+      </div>
+      <div class="pipeline-grid">
+        <div class="pipeline-stage">
+          <span class="pipeline-count">{{ summary.draftClaims }}</span>
+          <span class="pipeline-label">Drafts</span>
+          <mat-icon class="pipeline-icon draft-icon">edit_note</mat-icon>
         </div>
-        <div class="card-body">
-          <div class="row text-center">
-            <div class="col-md-3">
-              <div class="performance-metric">
-                <h3>{{ summary.totalClaims }}</h3>
-                <p>Total Claims</p>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="performance-metric">
-                <h3>{{ summary.draftClaims }}</h3>
-                <p>Drafts</p>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="performance-metric">
-                <h3>{{ summary.approvedClaims }}</h3>
-                <p>Approved</p>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="performance-metric">
-                <h3>{{ summary.rejectedClaims }}</h3>
-                <p>Rejected</p>
-              </div>
-            </div>
-          </div>
+        <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+        <div class="pipeline-stage">
+          <span class="pipeline-count">{{ summary.submittedClaims }}</span>
+          <span class="pipeline-label">Submitted</span>
+          <mat-icon class="pipeline-icon submitted-icon">send</mat-icon>
+        </div>
+        <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+        <div class="pipeline-stage">
+          <span class="pipeline-count">{{ summary.approvedClaims }}</span>
+          <span class="pipeline-label">Approved</span>
+          <mat-icon class="pipeline-icon approved-icon">check_circle</mat-icon>
+        </div>
+        <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+        <div class="pipeline-stage">
+          <span class="pipeline-count">{{ summary.rejectedClaims }}</span>
+          <span class="pipeline-label">Rejected</span>
+          <mat-icon class="pipeline-icon rejected-icon">cancel</mat-icon>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Quick Actions -->
-  <div class="row mt-4">
-    <div class="col-md-12 text-center">
-      <button class="btn btn-primary btn-lg me-2" routerLink="/refund-claims">
-        <i class="bi bi-list-ul"></i> View All Claims
+    <!-- Quick Actions -->
+    <div class="actions-section">
+      <button mat-raised-button color="primary" routerLink="/dashboard/refund-claims">
+        <mat-icon>list_alt</mat-icon>
+        View All Claims
       </button>
-      <button class="btn btn-success btn-lg me-2" routerLink="/refund-claims/new">
-        <i class="bi bi-plus-circle"></i> Create New Claim
-      </button>
-      <button class="btn btn-info btn-lg" (click)="loadSummary()">
-        <i class="bi bi-arrow-clockwise"></i> Refresh Dashboard
+      <button mat-raised-button color="accent" routerLink="/dashboard/refund-claims">
+        <mat-icon>add_circle</mat-icon>
+        Create New Claim
       </button>
     </div>
   </div>
 </div>
 
-<!-- Loading State -->
-<div *ngIf="loading" class="text-center py-5">
-  <div class="spinner-border text-primary"></div>
-  <p class="mt-2">Loading dashboard...</p>
-</div>
-
-<!-- Error State -->
-<div *ngIf="error" class="alert alert-danger">
-  <i class="bi bi-exclamation-triangle"></i> {{ error }}
-</div>

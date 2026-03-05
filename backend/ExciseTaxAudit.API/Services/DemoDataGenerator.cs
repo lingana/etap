@@ -21,15 +21,33 @@ public class DemoDataGenerator
 
     private readonly string[] _states = new[] { "CA", "TX", "NY", "IL", "FL", "PA", "OH" };
 
-    private readonly Dictionary<string, decimal> _stateTaxRates = new()
+    // Per-gallon tax rates (Federal + State combined) — MUST match TaxRatePlugin rates
+    // so the AI agent's variance calculation produces correct APPROVE/REJECT recommendations.
+    // Source: TaxRatePlugin.cs
+    private readonly Dictionary<string, Dictionary<string, decimal>> _perGallonTaxRates = new()
     {
-        { "CA", 0.539m }, // $0.539 per gallon
-        { "TX", 0.20m },
-        { "NY", 0.444m },
-        { "IL", 0.454m },
-        { "FL", 0.361m },
-        { "PA", 0.577m },
-        { "OH", 0.385m }
+        // Diesel: Federal $0.244 + state rate
+        ["DIESEL"] = new()
+        {
+            { "CA", 0.244m + 0.133m }, // $0.377/gal
+            { "TX", 0.244m + 0.20m },  // $0.444/gal
+            { "NY", 0.244m + 0.169m }, // $0.413/gal
+            { "IL", 0.244m + 0.219m }, // $0.463/gal
+            { "FL", 0.244m + 0.191m }, // $0.435/gal
+            { "PA", 0.244m + 0.255m }, // $0.499/gal
+            { "OH", 0.244m + 0.28m }   // $0.524/gal
+        },
+        // Gasoline: Federal $0.184 + state rate
+        ["GASOLINE"] = new()
+        {
+            { "CA", 0.184m + 0.539m }, // $0.723/gal
+            { "TX", 0.184m + 0.20m },  // $0.384/gal
+            { "NY", 0.184m + 0.459m }, // $0.643/gal
+            { "IL", 0.184m + 0.392m }, // $0.576/gal
+            { "FL", 0.184m + 0.196m }, // $0.380/gal
+            { "PA", 0.184m + 0.576m }, // $0.760/gal
+            { "OH", 0.184m + 0.385m }  // $0.569/gal
+        }
     };
 
     private readonly string[] _fuelTypes = new[]
@@ -78,28 +96,30 @@ public class DemoDataGenerator
         var anomalyCategory = "";
         
         // Generate diverse scenarios for different AI agent recommendations:
-        // - APPROVE: Clean overpayment within safe harbor (±10%)
+        // - APPROVE: Clear overpayment exceeding safe harbor (>10%) — refund opportunity
         // - NEEDS_MANUAL_REVIEW: Significant issues, borderline cases
         // - REJECT: Calculation errors, extreme variances
         
-        if (anomalyType < 0.55) // 55% normal transactions (for baseline/contrast)
+        if (anomalyType < 0.40) // 40% normal transactions (for baseline/contrast)
         {
             quantity = (decimal)(10 + _random.NextDouble() * 30); // 10-40 gallons
             anomalyCategory = "NORMAL";
         }
-        else if (anomalyType < 0.68) // 13% moderate overpayment (APPROVE candidates)
+        else if (anomalyType < 0.58) // 18% moderate overpayment (APPROVE candidates)
         {
-            // 3-9% overpayment - within safe harbor, clear refund approval
-            quantity = (decimal)(15 + _random.NextDouble() * 30);
+            // 20-29% overpayment with large quantities → recovery > $20 → deterministic APPROVE (Path 2)
+            // Worst case: 300 gal × $0.377/gal (CA Diesel) × 20% = $22.62 recovery ✓
+            quantity = (decimal)(300 + _random.NextDouble() * 300); // 300-600 gallons
             anomalyCategory = "MODERATE_OVERPAY";
         }
-        else if (anomalyType < 0.76) // 8% high overpayment (APPROVE but flagged)
+        else if (anomalyType < 0.70) // 12% high overpayment (APPROVE - strong refund case)
         {
-            // 10-18% overpayment - exceeds safe harbor, but clear overpayment pattern
-            quantity = (decimal)(20 + _random.NextDouble() * 35);
+            // 20-29% overpayment with very large quantities → bigger recovery → deterministic APPROVE
+            // Worst case: 500 gal × $0.377/gal (CA Diesel) × 20% = $37.70 recovery ✓
+            quantity = (decimal)(500 + _random.NextDouble() * 500); // 500-1000 gallons
             anomalyCategory = "HIGH_OVERPAY";
         }
-        else if (anomalyType < 0.82) // 6% borderline underpayment (MANUAL_REVIEW)
+        else if (anomalyType < 0.76) // 6% borderline underpayment (MANUAL_REVIEW)
         {
             // 5-9% underpayment - within safe harbor but suspicious
             quantity = (decimal)(12 + _random.NextDouble() * 28);
@@ -140,45 +160,52 @@ public class DemoDataGenerator
 
         var pricePerUnit = Math.Round(basePricePerGallon, 6);
         var netCost = Math.Round(quantity * pricePerUnit, 2);
-        var taxRate = _stateTaxRates[state];
-        var correctTax = quantity * taxRate;
+
+        // Calculate correct tax using per-gallon rates (Federal + State)
+        // This matches TaxRatePlugin.CalculateExpectedTax() which the AI agent uses
+        var fuelCategory = fuelType.Contains("DIESEL") ? "DIESEL" : "GASOLINE";
+        var perGallonRate = _perGallonTaxRates[fuelCategory][state];
+        var correctTax = quantity * perGallonRate;
         
         // Calculate tax based on anomaly category to drive AI recommendations
+        // AI agent approves when: potentialRecovery > $0 (actualTax > expectedTax) AND variance > 10%
         decimal totalTaxAmount;
         switch (anomalyCategory)
         {
             case "MODERATE_OVERPAY":
-                // 103-109% of correct (within safe harbor, APPROVE for refund)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(1.03 + _random.NextDouble() * 0.06), 2);
+                // 120-129% of correct tax → 20-29% variance → risk=MEDIUM → APPROVE (Path 2)
+                // At 300 gal × $0.377/gal min rate → correctTax ≥ $113, recovery ≥ $22.60
+                totalTaxAmount = Math.Round(correctTax * (decimal)(1.20 + _random.NextDouble() * 0.09), 2);
                 break;
             case "HIGH_OVERPAY":
-                // 110-118% of correct (exceeds safe harbor, still APPROVE)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(1.10 + _random.NextDouble() * 0.08), 2);
+                // 120-129% of correct tax → 20-29% variance → risk=MEDIUM, large qty → bigger recovery → APPROVE (Path 2)
+                // At 500 gal × $0.377/gal × 20% → recovery ≥ $37.70
+                totalTaxAmount = Math.Round(correctTax * (decimal)(1.20 + _random.NextDouble() * 0.09), 2);
                 break;
             case "BORDERLINE_UNDERPAY":
-                // 91-95% of correct (within safe harbor, but suspicious - MANUAL_REVIEW)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(0.91 + _random.NextDouble() * 0.04), 2);
+                // 85-92% of correct (8-15% underpayment → MANUAL_REVIEW)
+                totalTaxAmount = Math.Round(correctTax * (decimal)(0.85 + _random.NextDouble() * 0.07), 2);
                 break;
             case "MAJOR_UNDERPAY":
-                // 60-85% of correct (major error - likely REJECT)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(0.60 + _random.NextDouble() * 0.25), 2);
+                // 40-65% of correct (35-60% underpayment → REJECT, no recovery)
+                totalTaxAmount = Math.Round(correctTax * (decimal)(0.40 + _random.NextDouble() * 0.25), 2);
                 break;
             case "ZERO_TAX":
-                // 0-15% of correct (clear error - REJECT)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(_random.NextDouble() * 0.15), 2);
+                // 0-10% of correct (clear error → REJECT)
+                totalTaxAmount = Math.Round(correctTax * (decimal)(_random.NextDouble() * 0.10), 2);
                 break;
             case "EXTREME_OVERPAY":
-                // 150-200% of correct (unusual - MANUAL_REVIEW)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(1.50 + _random.NextDouble() * 0.50), 2);
+                // 200-300% of correct (unusual → MANUAL_REVIEW)
+                totalTaxAmount = Math.Round(correctTax * (decimal)(2.0 + _random.NextDouble() * 1.0), 2);
                 break;
             case "QUANTITY_SPIKE":
             case "PRICE_ANOMALY":
-                // Normal tax but suspicious pattern - MANUAL_REVIEW
-                totalTaxAmount = Math.Round(correctTax * (decimal)(0.98 + _random.NextDouble() * 0.04), 2);
+                // Normal tax but suspicious pattern → MANUAL_REVIEW
+                totalTaxAmount = Math.Round(correctTax * (decimal)(0.97 + _random.NextDouble() * 0.06), 2);
                 break;
             default:
-                // Normal: 98-102% of correct (baseline)
-                totalTaxAmount = Math.Round(correctTax * (decimal)(0.98 + _random.NextDouble() * 0.04), 2);
+                // Normal: 96-104% of correct (within safe harbor, no flag)
+                totalTaxAmount = Math.Round(correctTax * (decimal)(0.96 + _random.NextDouble() * 0.08), 2);
                 break;
         }
 

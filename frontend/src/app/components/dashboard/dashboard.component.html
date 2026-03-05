@@ -8,11 +8,11 @@
         <p class="welcome-subtitle" *ngIf="getEngagementLabel() === 'No engagement selected'">Select an engagement to begin</p>
       </div>
       <div class="quick-actions">
-        <button mat-raised-button color="primary" class="action-btn" (click)="navigateToUploadPage()">
+        <button mat-raised-button color="primary" class="action-btn" (click)="navigateToUploadPage()" [disabled]="isLoading">
           <mat-icon>upload_file</mat-icon>
           <span>Import Data</span>
         </button>
-        <button mat-raised-button class="action-btn" (click)="goToFlagged()" [disabled]="!stats || stats.flaggedRecords === 0">
+        <button mat-raised-button class="action-btn" (click)="goToFlagged()" [disabled]="isLoading || !stats || stats.flaggedRecords === 0">
           <mat-icon>fact_check</mat-icon>
           <span>Review Flagged</span>
           <span class="action-badge" *ngIf="stats && stats.flaggedRecords > 0">{{ stats.flaggedRecords }}</span>
@@ -21,8 +21,25 @@
     </div>
   </section>
 
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="dashboard-loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && dashboardError" class="dashboard-error">
+    <mat-icon>cloud_off</mat-icon>
+    <h3>Could not load dashboard</h3>
+    <p>{{ dashboardError }}</p>
+    <button mat-raised-button color="primary" (click)="loadDashboardData()">
+      <mat-icon>refresh</mat-icon>
+      Retry
+    </button>
+  </div>
+
   <!-- Workflow Progress Stepper -->
-  <section class="workflow-section" *ngIf="!isLoading">
+  <section class="workflow-section" *ngIf="!isLoading && !dashboardError">
     <div class="workflow-header">
       <div class="header-text">
         <h2>
@@ -86,29 +103,19 @@
           
           <p class="step-description" *ngIf="step.id === 4">
             <mat-icon class="desc-icon">request_quote</mat-icon>
-            Generate IRS Form 720-compliant refund claims automatically
+            Generate IRS Form 8849-ready refund claims automatically
           </p>
           <ul class="step-features" *ngIf="step.id === 4">
-            <li><mat-icon>check_circle_outline</mat-icon>Auto-populated forms</li>
+            <li><mat-icon>check_circle_outline</mat-icon>Auto-populated Form 8849</li>
             <li><mat-icon>check_circle_outline</mat-icon>Supporting documentation</li>
             <li><mat-icon>check_circle_outline</mat-icon>Multi-claim batching</li>
           </ul>
           
           <p class="step-description" *ngIf="step.id === 5">
-            <mat-icon class="desc-icon">send</mat-icon>
-            Submit claims electronically with IRS compliance validation
-          </p>
-          <ul class="step-features" *ngIf="step.id === 5">
-            <li><mat-icon>check_circle_outline</mat-icon>E-filing integration</li>
-            <li><mat-icon>check_circle_outline</mat-icon>Pre-submission checks</li>
-            <li><mat-icon>check_circle_outline</mat-icon>Submission tracking</li>
-          </ul>
-          
-          <p class="step-description" *ngIf="step.id === 6">
             <mat-icon class="desc-icon">account_balance</mat-icon>
             Monitor refund status and track recovered amounts in real-time
           </p>
-          <ul class="step-features" *ngIf="step.id === 6">
+          <ul class="step-features" *ngIf="step.id === 5">
             <li><mat-icon>check_circle_outline</mat-icon>Status dashboard</li>
             <li><mat-icon>check_circle_outline</mat-icon>Payment notifications</li>
             <li><mat-icon>check_circle_outline</mat-icon>ROI analytics</li>
@@ -245,13 +252,13 @@
         <div class="chart-content">
           <div class="pie-chart-container">
             <svg class="pie-chart" viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r="80" fill="#0078d4" opacity="0.2"/>
-              <circle cx="100" cy="100" r="80" fill="none" stroke="#0078d4" stroke-width="40"
+              <circle cx="100" cy="100" r="80" fill="#5a67d8" opacity="0.2"/>
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#5a67d8" stroke-width="40"
                       [attr.stroke-dasharray]="getAnomalyArc(0) + ' ' + getAnomalyTotal()" transform="rotate(-90 100 100)"/>
-              <circle cx="100" cy="100" r="80" fill="none" stroke="#d83b01" stroke-width="40"
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#dc2626" stroke-width="40"
                       [attr.stroke-dasharray]="getAnomalyArc(1) + ' ' + getAnomalyTotal()" 
                       [attr.stroke-dashoffset]="'-' + getAnomalyArc(0)" transform="rotate(-90 100 100)"/>
-              <circle cx="100" cy="100" r="80" fill="none" stroke="#107c10" stroke-width="40"
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#10b981" stroke-width="40"
                       [attr.stroke-dasharray]="getAnomalyArc(2) + ' ' + getAnomalyTotal()" 
                       [attr.stroke-dashoffset]="'-' + (getAnomalyArc(0) + getAnomalyArc(1))" transform="rotate(-90 100 100)"/>
             </svg>

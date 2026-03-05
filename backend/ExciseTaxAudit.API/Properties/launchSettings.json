@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "// NOTE": "Azure OpenAI credentials are NOT stored here for security.",
+  "// SETUP": "Set system environment variables (AzureOpenAI__ApiKey, AzureOpenAI__Endpoint, AzureOpenAI__DeploymentId).",
+  "// GUIDE": "See QUICK_START_ENV_VARS.md for setup instructions.",
+  "profiles": {
+    "ExciseTaxAudit.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:60719;http://localhost:60720"
+    }
+  }
+}

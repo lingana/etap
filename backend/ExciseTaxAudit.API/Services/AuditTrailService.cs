@@ -53,11 +53,16 @@ public class AuditTrailService
     }
 
     /// <summary>
-    /// Get recent activity across all engagements.
+    /// Get recent activity, optionally filtered by engagement.
     /// </summary>
-    public async Task<List<AuditLog>> GetRecentActivityAsync(int maxRecords = 50)
+    public async Task<List<AuditLog>> GetRecentActivityAsync(int maxRecords = 50, int? engagementId = null)
     {
-        return await _context.AuditLogs
+        var query = _context.AuditLogs.AsQueryable();
+
+        if (engagementId.HasValue)
+            query = query.Where(l => l.EngagementId == engagementId.Value);
+
+        return await query
             .OrderByDescending(l => l.Timestamp)
             .Take(maxRecords)
             .ToListAsync();

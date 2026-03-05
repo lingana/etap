@@ -4,6 +4,7 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { FlaggedTransaction, UploadJobStatus, DashboardStats } from '../models/transaction.model';
 import { TaxClientService } from './tax-client.service';
+import { environment } from '../../environments/environment';
 
 export interface StateSummaryRow {
   stateCode: string;
@@ -55,7 +56,7 @@ export interface UpdateAuditStatsRequest {
   providedIn: 'root'
 })
 export class AuditService {
-  private apiUrl = 'http://localhost:5000/api';
+  private apiUrl = environment.apiUrl;
   
   // Event emitter for successful uploads
   uploadCompleted$ = new Subject<UploadJobStatus>();
@@ -255,7 +256,8 @@ export class AuditService {
       duplicatesFound: 0,
       averagePriceDeviation: 0,
       highRiskMerchants: [],
-      summaryType: 'executive'
+      summaryType: 'executive',
+      engagementId: this.getSelectedEngagementId()
     };
 
     return this.http.post<any>(`${this.apiUrl}/anomalydetection/summary`, request);
@@ -278,10 +280,11 @@ export class AuditService {
       duplicatesFound: 0,
       averagePriceDeviation: 0,
       highRiskMerchants: [],
-      summaryType: 'executive'
+      summaryType: 'executive',
+      engagementId: this.getSelectedEngagementId()
     };
 
-    return this.http.post<any>(`${this.apiUrl}/anomalydetection/summary`, request);
+    return this.http.post<any>(`${this.apiUrl}/anomalydetection/recommendations`, request);
   }
 
   /**
@@ -295,7 +298,7 @@ export class AuditService {
       fuelType: transaction.fuelType,
       quantity: transaction.quantity,
       price: transaction.pricePerUnit,
-      stateAveragePrice: transaction.pricePerUnit * 0.9, // Placeholder - should come from actual data
+      stateAveragePrice: transaction.stateAveragePrice || transaction.pricePerUnit, // Use backend-provided average or fall back to transaction price
       transactionDate: transaction.transactionDate,
       supplierName: transaction.merchantName
     };
@@ -315,7 +318,7 @@ export class AuditService {
         fuelType: t.fuelType,
         quantity: t.quantity,
         price: t.pricePerUnit,
-        stateAveragePrice: t.pricePerUnit * 0.9, // Placeholder - should come from actual data
+        stateAveragePrice: t.stateAveragePrice || t.pricePerUnit, // Use backend-provided average or fall back
         transactionDate: t.transactionDate,
         supplierName: t.merchantName
       })),
