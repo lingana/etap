@@ -172,18 +172,18 @@ export interface NewClaimDialogData {
     .dialog-title {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       margin: 0;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
-      color: #1a1a2e;
+      color: var(--text-primary, #1a1a2e);
     }
 
     .dialog-title-icon {
-      color: #667eea;
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      color: var(--primary, #667eea);
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
 
     .dialog-content {

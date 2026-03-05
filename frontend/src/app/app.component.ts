@@ -139,6 +139,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
       // Escape to close mobile sidebar or dialog
       if (event.key === 'Escape' || event.key === 'Esc') {
+        if (this.showNotificationPanel) {
+          this.showNotificationPanel = false;
+          return;
+        }
         if (this.isMobile && this.sidebarOpen) {
           this.closeSidebar();
         }
@@ -150,6 +154,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Navbar methods
   openAuditAIChat(): void {
+    this.showNotificationPanel = false;
     this.isAILoading = true;
 
     setTimeout(() => {

@@ -814,6 +814,27 @@ tr:hover td {
   height: 20px;
 }
 
+/* ==================== HIGHLIGHTED ROW (Suggested Review) ==================== */
+@keyframes highlightPulse {
+  0%   { background-color: #fde68a !important; }
+  30%  { background-color: #fef3c7 !important; }
+  60%  { background-color: #fde68a !important; }
+  100% { background-color: #fef9c3 !important; }
+}
+
+.transactions-mat-table tr.mat-mdc-row.highlighted-row {
+  animation: highlightPulse 2s ease-in-out;
+  animation-fill-mode: forwards;
+  outline: 2px solid #f59e0b;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.transactions-mat-table tr.mat-mdc-row.highlighted-row td {
+  background-color: inherit !important;
+}
+
 /* Status badges */
 .status-badge {
   padding: 4px 10px;
@@ -949,7 +970,7 @@ tr:hover td {
 
 .detail-panel-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #fff;
   display: flex;
@@ -1014,6 +1035,9 @@ tr:hover td {
   padding: 0;
   background: var(--bg-secondary, #f8f9fb);
   min-height: 0;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom scrollbar for panel */
@@ -1038,6 +1062,17 @@ tr:hover td {
   display: block;
 }
 
+/* Close on backdrop click — cursor hint */
+.detail-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 65%;
+  bottom: 0;
+  cursor: pointer;
+}
+
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -1051,6 +1086,10 @@ tr:hover td {
   .detail-panel {
     width: 100%;
     max-width: 100%;
+  }
+
+  .detail-overlay::before {
+    display: none;
   }
 
   .transactions-container {

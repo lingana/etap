@@ -74,7 +74,7 @@
 
       <!-- User Account Menu -->
       <button mat-icon-button disableRipple class="user-account-btn" [matMenuTriggerFor]="userMenu"
-        [attr.aria-label]="'User account menu for {{ currentUser?.fullName || \'User\' }}'">
+        [attr.aria-label]="'User account menu for ' + (currentUser?.fullName || 'User')">
         <mat-icon>account_circle</mat-icon>
         <!-- Online status indicator -->
         <span class="status-indicator online" *ngIf="currentUser"></span>

@@ -126,7 +126,7 @@
             <span class="suggested-id">#{{ tx.recordID }}</span>
             <span class="suggested-merchant">{{ tx.merchantName }}</span>
             <span class="suggested-date">{{ tx.transactionDate | date: 'MM/dd/yy' }}</span>
-            <button mat-stroked-button color="primary" (click)="viewDetails(tx)">Review Now</button>
+            <button mat-stroked-button color="primary" (click)="reviewSuggested(tx)">Review Now</button>
           </div>
         </div>
       </div>
@@ -429,7 +429,9 @@
             <!-- Header and Row Declarations -->
             <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                [attr.data-record-id]="row.recordID"
                 [class.selected-row]="selection.isSelected(row)"
+                [class.highlighted-row]="highlightedTransactionId === row.recordID"
                 (click)="viewDetails(row)">
             </tr>
           </table>

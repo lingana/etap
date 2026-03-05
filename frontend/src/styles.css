@@ -444,16 +444,11 @@ button:hover mat-icon {
 
 /* Material Dialog */
 .mat-mdc-dialog-container {
-  border-top: 4px solid var(--primary);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .mat-mdc-dialog-title {
   color: var(--text-primary);
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 18px;
-  letter-spacing: 0.5px;
 }
 
 /* Material Paginator */
@@ -525,11 +520,16 @@ button:hover mat-icon {
   z-index: 9999 !important;
 }
 
-/* Dialog container styling */
+/* Dialog container styling — single consolidated rule */
 .mat-mdc-dialog-container {
   z-index: 9999 !important;
-  box-shadow: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
   border: 1px solid var(--border-light);
+  border-radius: 12px !important;
+}
+
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 12px !important;
 }
 
 /* Logout panel specific styling */
@@ -544,7 +544,7 @@ button:hover mat-icon {
 /* NLQ dialog: remove default padding so the component header goes edge-to-edge */
 .nlq-dialog-panel .mat-mdc-dialog-surface {
   padding: 0 !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   overflow: hidden;
 }
 
@@ -553,11 +553,11 @@ button:hover mat-icon {
 }
 
 .mat-mdc-dialog-container .mat-mdc-dialog-title {
-  margin-bottom: 16px !important;
+  margin-bottom: 12px !important;
 }
 
 .mat-mdc-dialog-container .mat-mdc-dialog-content {
-  padding: 0 !important;
+  padding: 0 24px !important;
   margin: 0 !important;
 }
 
@@ -565,6 +565,7 @@ button:hover mat-icon {
   display: flex !important;
   justify-content: flex-end !important;
   gap: 12px !important;
+  padding: 12px 24px 16px !important;
 }
 
 /* Micro-Interactions and Enhancements */

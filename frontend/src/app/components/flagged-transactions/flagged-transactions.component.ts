@@ -58,6 +58,7 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
   reviewingTransactionId: number | null = null; // Track which transaction is being reviewed
   isBulkReviewing = false; // Track bulk review progress
   bulkReviewProgress = 0; // Progress percentage
+  highlightedTransactionId: number | null = null; // Track which row is highlighted from suggested review
   selectedTransactionIds: number[] = [];
   displayedTransactions: FlaggedTransaction[] = [];
   isLoading = false;
@@ -178,6 +179,8 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (mainContent) mainContent.style.overflow = '';
   }
 
   loadFlaggedTransactions(): void {
@@ -211,10 +214,54 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
 
   viewDetails(transaction: FlaggedTransaction): void {
     this.selectedTransaction = transaction;
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (mainContent) mainContent.style.overflow = 'hidden';
+  }
+
+  /**
+   * Called from "Suggested for Review" — highlights the row and scrolls to it.
+   */
+  reviewSuggested(transaction: FlaggedTransaction): void {
+    // Close any existing detail panel so the table is fully visible
+    this.selectedTransaction = null;
+
+    // Ensure we're in table view
+    this.viewMode = 'table';
+
+    // Navigate paginator to the page containing this row
+    const paginator = this.dataSource.paginator;
+    if (paginator) {
+      const rowIndex = this.dataSource.filteredData.findIndex(t => t.recordID === transaction.recordID);
+      if (rowIndex >= 0) {
+        const targetPage = Math.floor(rowIndex / paginator.pageSize);
+        if (paginator.pageIndex !== targetPage) {
+          paginator.pageIndex = targetPage;
+          paginator.page.emit({ pageIndex: targetPage, pageSize: paginator.pageSize, length: paginator.length });
+        }
+      }
+    }
+
+    // Set the highlight
+    this.highlightedTransactionId = transaction.recordID;
+
+    // Scroll to the row after a tick (so the table re-renders on the correct page)
+    setTimeout(() => {
+      const row = document.querySelector(`tr[data-record-id="${transaction.recordID}"]`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    // Auto-clear highlight after the animation finishes
+    setTimeout(() => {
+      this.highlightedTransactionId = null;
+    }, 4000);
   }
 
   closeDetails(): void {
     this.selectedTransaction = null;
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (mainContent) mainContent.style.overflow = '';
   }
 
   // DevExtreme handles pagination automatically, no need for manual page change handler

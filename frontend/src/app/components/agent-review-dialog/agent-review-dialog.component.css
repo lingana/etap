@@ -2,12 +2,14 @@
 :host ::ng-deep .mat-mdc-dialog-container {
   padding: 0 !important;
   overflow: hidden;
+  border-top: none;
 }
 
 :host ::ng-deep .mat-mdc-dialog-surface {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  border-radius: 12px !important;
 }
 
 .dialog-container {
@@ -32,8 +34,9 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 20px;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .agent-icon {
