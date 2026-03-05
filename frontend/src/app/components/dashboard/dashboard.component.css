@@ -383,6 +383,18 @@
   border-left: 4px solid var(--success);
 }
 
+.stat-card.duplicates {
+  border-left: 4px solid #f59e0b;
+}
+
+.stat-icon.duplicate-icon {
+  background: #fef3c7;
+}
+
+.stat-icon.duplicate-icon mat-icon {
+  color: #d97706;
+}
+
 .stat-icon {
   width: 48px;
   height: 48px;

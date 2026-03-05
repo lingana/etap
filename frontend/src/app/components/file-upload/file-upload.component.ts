@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AuditService } from '../../services/audit.service';
 import { ToastService } from '../../services/toast.service';
 import { TaxClientService } from '../../services/tax-client.service';
+import { DuplicateDetectionService } from '../../services/duplicate-detection.service';
 import { UploadJobStatus } from '../../models/transaction.model';
 import { Engagement } from '../../models/tax-client.model';
 
@@ -38,6 +39,7 @@ export class FileUploadComponent {
     private auditService: AuditService, 
     private toastService: ToastService,
     private taxClientService: TaxClientService,
+    private duplicateDetectionService: DuplicateDetectionService,
     private router: Router
   ) { }
 
@@ -189,6 +191,18 @@ export class FileUploadComponent {
         
         // Emit event to trigger refresh in other components
         this.auditService.uploadCompleted$.next(response);
+
+        // Auto-trigger duplicate detection scan in the background
+        this.duplicateDetectionService.detectDuplicates().subscribe({
+          next: (result) => {
+            if (result.totalDuplicateGroups > 0) {
+              this.toastService.warning(
+                `⚠ ${result.totalDuplicateGroups} duplicate group(s) detected — review before filing claims`
+              );
+            }
+          },
+          error: () => { /* silently fail — supplementary check */ }
+        });
       },
       (error) => {
         this.errorMessage = 'Upload failed: ' + error.message;

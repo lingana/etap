@@ -467,6 +467,84 @@
   color: #d97706;
 }
 
+/* ==================== DUPLICATE WARNING BANNER ==================== */
+.duplicate-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.duplicate-warning-banner mat-icon {
+  color: #d97706;
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.duplicate-warning-banner strong {
+  font-weight: 700;
+}
+
+.duplicate-link-btn {
+  margin-left: auto;
+  font-size: 12px;
+  height: 32px;
+  border-color: #d97706 !important;
+  color: #92400e !important;
+}
+
+.duplicate-link-btn mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #92400e;
+}
+
+/* ==================== DUPLICATE BADGE (Table cell) ==================== */
+.status-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.duplicate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.duplicate-badge:hover {
+  background: #fde68a;
+}
+
+.duplicate-badge mat-icon {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
 .engagement-label {
   margin-top: 8px !important;
   padding: 8px 12px;

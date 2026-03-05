@@ -5,6 +5,7 @@ import { AuditService } from '../../services/audit.service';
 import { ToastService } from '../../services/toast.service';
 import { TaxClientService } from '../../services/tax-client.service';
 import { AgenticReviewService } from '../../services/agentic-review.service';
+import { DuplicateDetectionService, DuplicateGroup } from '../../services/duplicate-detection.service';
 import { FlaggedTransaction, TransactionStatus } from '../../models/transaction.model';
 import { Engagement } from '../../models/tax-client.model';
 import { MatDialog } from '@angular/material/dialog';
@@ -91,11 +92,16 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
     return this.selectedTransactionIds.length;
   }
 
+  // Duplicate detection state
+  duplicateGroups: DuplicateGroup[] = [];
+  duplicatesLoaded = false;
+
   constructor(
     private auditService: AuditService, 
     private toastService: ToastService,
     private taxClientService: TaxClientService,
     private agenticReviewService: AgenticReviewService,
+    private duplicateDetectionService: DuplicateDetectionService,
     private dialog: MatDialog,
     private router: Router
   ) { }
@@ -141,11 +147,13 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
     this.selectedTransactionIds = [];
     
     this.loadFlaggedTransactions();
+    this.loadDuplicateState();
     
     // Subscribe to upload completion event to auto-refresh
     this.subscriptions.push(
       this.auditService.uploadCompleted$.subscribe(() => {
         this.loadFlaggedTransactions();
+        this.loadDuplicateState();
       })
     );
 
@@ -154,6 +162,16 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
       this.auditService.transactionReviewed$.subscribe(() => {
         this.closeDetails();
         this.loadFlaggedTransactions();
+      })
+    );
+
+    // React to duplicate detection results
+    this.subscriptions.push(
+      this.duplicateDetectionService.duplicateResult$.subscribe(result => {
+        if (result) {
+          this.duplicateGroups = result.groups;
+          this.duplicatesLoaded = true;
+        }
       })
     );
   }
@@ -702,9 +720,95 @@ export class FlaggedTransactionsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // P0 Safeguard: Check for unresolved duplicates among selected transactions
+    const duplicateWarnings = this.getSelectedDuplicateWarnings(selectedTransactions);
+    if (duplicateWarnings.length > 0) {
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        width: '520px',
+        data: {
+          title: 'Unresolved Duplicates Detected',
+          message: `${duplicateWarnings.length} selected transaction(s) belong to unresolved duplicate groups. ` +
+            `Filing duplicate claims may result in IRS rejections or penalties. ` +
+            `Affected: ${duplicateWarnings.map(t => t.transactionNumber).join(', ')}. ` +
+            `Proceed anyway, or resolve duplicates first?`,
+          icon: 'content_copy',
+          iconColor: 'warn',
+          confirmText: 'Proceed Anyway',
+          cancelText: 'Resolve Duplicates',
+          confirmColor: 'warn'
+        }
+      });
+
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (confirmed) {
+          this.taxClientService.setPendingRefundTransactionIds(this.selectedTransactionIds);
+          this.router.navigate(['/dashboard/refund-claims']);
+        } else {
+          this.router.navigate(['/dashboard/duplicates']);
+        }
+      });
+      return;
+    }
+
     // Store transaction IDs in service for refund claims page to use
     this.taxClientService.setPendingRefundTransactionIds(this.selectedTransactionIds);
     this.router.navigate(['/dashboard/refund-claims']);
+  }
+
+  // ========== Duplicate Detection Integration ==========
+
+  /**
+   * Load duplicate detection state (either from existing results or trigger a background scan)
+   */
+  private loadDuplicateState(): void {
+    const existing = this.duplicateDetectionService.getDuplicatesFoundCount();
+    if (existing > 0) {
+      return; // Results already available from a previous scan
+    }
+    // Trigger a background scan silently
+    this.duplicateDetectionService.detectDuplicates().subscribe({
+      next: () => { /* results flow via duplicateResult$ subscription */ },
+      error: () => { /* silently fail — duplicate check is supplementary */ }
+    });
+  }
+
+  /**
+   * Get the duplicate group a transaction belongs to (unresolved only)
+   */
+  getDuplicateGroupForTransaction(transaction: FlaggedTransaction): DuplicateGroup | null {
+    if (!this.duplicatesLoaded) return null;
+    return this.duplicateGroups.find(g =>
+      !g.resolved && g.transactions.some(t => t.recordID === transaction.recordID)
+    ) || null;
+  }
+
+  /**
+   * Check if a transaction has unresolved duplicates
+   */
+  hasUnresolvedDuplicate(transaction: FlaggedTransaction): boolean {
+    return this.getDuplicateGroupForTransaction(transaction) !== null;
+  }
+
+  /**
+   * Get transactions from the selection that have unresolved duplicate groups
+   */
+  private getSelectedDuplicateWarnings(selectedTransactions: FlaggedTransaction[]): FlaggedTransaction[] {
+    if (!this.duplicatesLoaded) return [];
+    return selectedTransactions.filter(t => this.hasUnresolvedDuplicate(t));
+  }
+
+  /**
+   * Navigate to duplicate detection page
+   */
+  goToDuplicates(): void {
+    this.router.navigate(['/dashboard/duplicates']);
+  }
+
+  /**
+   * Get total count of unresolved duplicate groups
+   */
+  getUnresolvedDuplicateCount(): number {
+    return this.duplicateGroups.filter(g => !g.resolved).length;
   }
 
   approveTransaction(transaction: FlaggedTransaction): void {

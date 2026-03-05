@@ -4,6 +4,7 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { FlaggedTransaction, UploadJobStatus, DashboardStats } from '../models/transaction.model';
 import { TaxClientService } from './tax-client.service';
+import { DuplicateDetectionService } from './duplicate-detection.service';
 import { environment } from '../../environments/environment';
 
 export interface StateSummaryRow {
@@ -71,7 +72,11 @@ export class AuditService {
   public currentAudit$ = this.currentAuditSubject.asObservable();
   public audits$ = this.auditsSubject.asObservable();
 
-  constructor(private http: HttpClient, private taxClientService: TaxClientService) { }
+  constructor(
+    private http: HttpClient,
+    private taxClientService: TaxClientService,
+    private duplicateDetectionService: DuplicateDetectionService
+  ) { }
 
   private getSelectedEngagementId(): number | null {
     return this.taxClientService.getSelectedEngagement()?.id ?? null;
@@ -253,7 +258,7 @@ export class AuditService {
       totalTransactionsProcessed: totalTransactions,
       anomaliesDetected: anomaliesDetected,
       reviewedRecords: reviewedRecords,
-      duplicatesFound: 0,
+      duplicatesFound: this.duplicateDetectionService.getDuplicatesFoundCount(),
       averagePriceDeviation: 0,
       highRiskMerchants: [],
       summaryType: 'executive',
@@ -277,7 +282,7 @@ export class AuditService {
       totalTransactionsProcessed: stats.totalRecords,
       anomaliesDetected: stats.flaggedRecords,
       reviewedRecords: stats.reviewedRecords,
-      duplicatesFound: 0,
+      duplicatesFound: this.duplicateDetectionService.getDuplicatesFoundCount(),
       averagePriceDeviation: 0,
       highRiskMerchants: [],
       summaryType: 'executive',

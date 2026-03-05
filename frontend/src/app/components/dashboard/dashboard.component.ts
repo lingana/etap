@@ -6,6 +6,7 @@ import { TaxClientService } from '../../services/tax-client.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { AgenticReviewService } from '../../services/agentic-review.service';
+import { DuplicateDetectionService } from '../../services/duplicate-detection.service';
 import { environment } from '../../../environments/environment';
 
 interface AIInsight {
@@ -39,6 +40,7 @@ export class DashboardComponent implements OnInit {
   isLoading = true;
   dashboardError: string | null = null;
   aiInsights: AIInsight | null = null;
+  duplicateCount = 0;
 
   // Workflow steps
   workflowSteps = [
@@ -64,6 +66,7 @@ export class DashboardComponent implements OnInit {
     private toastService: ToastService,
     private authService: AuthService,
     private agenticReviewService: AgenticReviewService,
+    private duplicateDetectionService: DuplicateDetectionService,
     private router: Router
   ) {}
 
@@ -81,6 +84,7 @@ export class DashboardComponent implements OnInit {
         this.dashboardError = null;
         this.updateWorkflowProgress();
         this.loadAIInsights();
+        this.loadDuplicateCount();
         this.isLoading = false;
       },
       (error) => {
@@ -139,6 +143,28 @@ export class DashboardComponent implements OnInit {
       return `${client.name} - ${engagement.engagementName}`;
     }
     return 'No engagement selected';
+  }
+
+  loadDuplicateCount(): void {
+    // Check if duplicate results already exist
+    const existing = this.duplicateDetectionService.getDuplicatesFoundCount();
+    if (existing > 0) {
+      this.duplicateCount = existing;
+      return;
+    }
+    // Run a background scan if stats indicate we have data
+    if (this.stats && this.stats.totalRecords > 0) {
+      this.duplicateDetectionService.detectDuplicates().subscribe({
+        next: (result) => {
+          this.duplicateCount = result.totalDuplicateGroups;
+        },
+        error: () => { /* silently fail */ }
+      });
+    }
+  }
+
+  goToDuplicates(): void {
+    this.router.navigate(['/dashboard/duplicates']);
   }
 
   getCurrentStep(): number {

@@ -438,11 +438,22 @@
           <p class="stat-label">Potential Recovery</p>
         </div>
       </div>
+
+      <div class="stat-card duplicates" (click)="goToDuplicates()">
+        <div class="stat-icon duplicate-icon">
+          <mat-icon>content_copy</mat-icon>
+        </div>
+        <div class="stat-content">
+          <h3 class="stat-value">{{ duplicateCount }}</h3>
+          <p class="stat-label">Duplicate Groups</p>
+          <p class="stat-detail" *ngIf="duplicateCount > 0">Requires resolution</p>
+        </div>
+      </div>
     </div>
 
     <!-- Loading skeleton -->
     <div class="stats-grid" *ngIf="isLoading">
-      <div class="stat-card skeleton" *ngFor="let i of [1,2,3,4]">
+      <div class="stat-card skeleton" *ngFor="let i of [1,2,3,4,5]">
         <div class="skeleton-icon"></div>
         <div class="skeleton-content">
           <div class="skeleton-line large"></div>
